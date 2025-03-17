@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, RefreshCw } from "lucide-react";
+import { Copy, RefreshCw, Shield } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -46,6 +46,12 @@ export function EmailHeader() {
 
   return (
     <div className="flex flex-col items-center text-center">
+      <div className="inline-flex items-center gap-2 mb-2 text-primary">
+        <Shield className="h-5 w-5" />
+        <span className="text-sm font-medium">
+          Open Source Disposable Email
+        </span>
+      </div>
       <h1 className="text-5xl font-bold text-gray-900 mb-4">
         Free Temporary Email
       </h1>
