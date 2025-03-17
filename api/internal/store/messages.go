@@ -213,7 +213,7 @@ func (m MessageStore) Delete(id int64) error {
 	query := `
         UPDATE messages
         SET deleted_at = $1
-        WHERE id = $2 AND deleted_at IS NULL`
+        WHERE id = $2`
 
 	result, err := m.db.Exec(query, time.Now(), id)
 	if err != nil {
@@ -240,7 +240,7 @@ func (m MessageStore) GetAll(toAddressID int64) ([]*Message, error) {
 	query := `
         SELECT id, from_address, to_address_id, subject, body, received_at, created_at, updated_at
         FROM messages
-        WHERE to_address_id = $1 AND deleted_at IS NULL`
+        WHERE to_address_id = $1`
 
 	rows, err := m.db.Query(query, toAddressID)
 	if err != nil {

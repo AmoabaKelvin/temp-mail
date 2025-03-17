@@ -41,6 +41,7 @@ func (app *application) mount() http.Handler {
 		r.Get("/healthcheck", app.healthCheckHandler)
 		r.Post("/create_message", app.createMessageHandler)
 		r.Get("/generate", app.generateAddressHandler)
+		r.Get("/get_messages", app.getMessageByRecepientHandler) //get all messages with the recepient email
 	})
 
 	return r

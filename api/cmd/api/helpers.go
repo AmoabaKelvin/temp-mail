@@ -36,6 +36,14 @@ func (app *application) readIDParam(r *http.Request) (int64, error) {
 	return id, nil
 }
 
+func (app *application) readEmailParam(r *http.Request) (string, error) {
+	email := r.URL.Query().Get("email")
+	if email == "" {
+		return "", errors.New("email parameter is missing")
+	}
+	return email, nil
+}
+
 func (app *application) writeJSON(w http.ResponseWriter, status int, data envelope, headers http.Header) error {
 	js, err := json.MarshalIndent(data, "", "\t")
 	if err != nil {

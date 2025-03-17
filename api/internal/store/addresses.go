@@ -73,7 +73,7 @@ func (a AddressStore) GetByEmail(email string) (*Address, error) {
 	query := `
         SELECT id, email, expires_at, created_at, updated_at
         FROM addresses
-        WHERE email = $1 AND deleted_at IS NULL`
+        WHERE email = $1`
 
 	var address Address
 	err := a.db.QueryRow(query, email).Scan(
@@ -100,7 +100,7 @@ func (a AddressStore) Update(address *Address) error {
 	query := `
         UPDATE addresses
         SET email = $1, expires_at = $2, updated_at = $3
-        WHERE id = $4 AND deleted_at IS NULL`
+        WHERE id = $4`
 
 	args := []any{
 		address.Email,
@@ -131,7 +131,6 @@ func (a AddressStore) Delete(id int64) error {
 		return ErrRecordNotFound
 	}
 
-	// Soft delete - update deleted_at field
 	query := `
         UPDATE addresses
         SET deleted_at = $1
