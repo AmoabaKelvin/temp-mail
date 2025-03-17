@@ -209,13 +209,9 @@ func (m MessageStore) Delete(id int64) error {
 		return ErrRecordNotFound
 	}
 
-	// Soft delete - update deleted_at field
-	query := `
-        UPDATE messages
-        SET deleted_at = $1
-        WHERE id = $2`
+	query := `DELETE FROM messages WHERE id = $1`
 
-	result, err := m.db.Exec(query, time.Now(), id)
+	result, err := m.db.Exec(query, id)
 	if err != nil {
 		return err
 	}

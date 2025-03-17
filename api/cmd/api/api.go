@@ -42,6 +42,7 @@ func (app *application) mount() http.Handler {
 		r.Post("/create_message", app.createMessageHandler)
 		r.Get("/generate", app.generateAddressHandler)
 		r.Get("/get_messages", app.getMessageByRecepientHandler) //get all messages with the recepient email
+		r.Delete("/delete_message", app.deleteMessageHandler)    //delete a message by id
 	})
 
 	return r

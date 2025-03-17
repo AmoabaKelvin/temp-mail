@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/AmoabaKelvin/temp-mail/api/internal/store"
 	"github.com/AmoabaKelvin/temp-mail/api/internal/validator"
@@ -52,8 +53,12 @@ func (api *application) getMessageHandler(w http.ResponseWriter, r *http.Request
 		api.badRequestResponse(w, r, err)
 		return
 	}
-
-	message, err := api.store.Message.Get(id)
+	idInt, err := strconv.ParseInt(id, 10, 64)
+	if err != nil {
+		api.badRequestResponse(w, r, err)
+		return
+	}
+	message, err := api.store.Message.Get(idInt)
 	if err == store.ErrRecordNotFound {
 		api.notFoundResponse(w, r)
 		return
@@ -111,6 +116,34 @@ func (api *application) getMessageByRecepientHandler(w http.ResponseWriter, r *h
 	}
 
 	err = api.writeJSON(w, http.StatusOK, envelope{"messages": messages}, nil)
+	if err != nil {
+		api.writeJSONError(w, r)
+		return
+	}
+}
+
+func (api *application) deleteMessageHandler(w http.ResponseWriter, r *http.Request) {
+	id, err := api.readIDParam(r)
+	if err != nil {
+		api.badRequestResponse(w, r, err)
+		return
+	}
+	idInt, err := strconv.ParseInt(id, 10, 64)
+	if err != nil {
+		api.badRequestResponse(w, r, err)
+		return
+	}
+
+	err = api.store.Message.Delete(idInt)
+	if err == store.ErrRecordNotFound {
+		api.notFoundResponse(w, r)
+		return
+	} else if err != nil {
+		api.serverErrorResponse(w, r, err)
+		return
+	}
+
+	err = api.writeJSON(w, http.StatusOK, envelope{"message": "message deleted successfully"}, nil)
 	if err != nil {
 		api.writeJSONError(w, r)
 		return

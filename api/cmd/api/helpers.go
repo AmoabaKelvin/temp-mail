@@ -6,32 +6,18 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/AmoabaKelvin/temp-mail/api/internal/store"
-	"github.com/go-chi/chi/v5"
 	gonanoid "github.com/matoous/go-nanoid/v2"
 )
 
 type envelope map[string]any
 
-func (app *application) readIDParam(r *http.Request) (int64, error) {
-	ctx := r.Context()
-
-	routeCtx := chi.RouteContext(ctx)
-	if routeCtx == nil {
-		return 0, errors.New("route context is not found")
-	}
-
-	idStr := routeCtx.URLParam("id")
-	if idStr == "" {
-		return 0, errors.New("id parameter is missing")
-	}
-
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil || id < 1 {
-		return 0, errors.New("invalid id parameter")
+func (app *application) readIDParam(r *http.Request) (string, error) {
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		return "", errors.New("id parameter is missing")
 	}
 	return id, nil
 }
