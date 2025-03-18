@@ -1,4 +1,4 @@
-module github.com/AmoabaKelvin/temp-mail/api
+module github.com/AmoabaKelvin/temp-mail/temp_mail_api
 
 go 1.24.1
 
