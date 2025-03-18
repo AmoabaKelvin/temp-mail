@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/AmoabaKelvin/temp-mail/temp_mail_api/internal"
+	"github.com/AmoabaKelvin/temp-mail/internal"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/joho/godotenv"
