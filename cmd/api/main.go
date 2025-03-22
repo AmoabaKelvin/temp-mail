@@ -3,11 +3,11 @@ package main
 import (
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/AmoabaKelvin/temp-mail/internal/database"
 	"github.com/AmoabaKelvin/temp-mail/internal/handlers"
 	"github.com/AmoabaKelvin/temp-mail/internal/repository"
+	"github.com/AmoabaKelvin/temp-mail/pkg/config"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/joho/godotenv"
@@ -27,6 +27,11 @@ func main() {
 
 	repository := repository.New(db)
 	handler := handlers.New(repository)
+
+	config, err := config.Load()
+	if err != nil {
+		log.Fatal("Error loading config")
+	}
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)

@@ -7,13 +7,12 @@ import (
 	"io"
 	"log"
 	"net/mail"
-	"os"
 	"time"
 
 	"github.com/emersion/go-smtp"
-	"github.com/joho/godotenv"
 	"gorm.io/gorm"
 
+	"github.com/AmoabaKelvin/temp-mail/pkg/config"
 	models "github.com/AmoabaKelvin/temp-mail/pkg/dto"
 )
 
@@ -137,31 +136,13 @@ func (s *Session) Quit() error {
 
 func startMailServer() {
 	// Create a new backend
-	db := models.SetupDatabase()
-	backend := &Backend{db: db}
-
-	//Read config from the environment
-	err := godotenv.Load()
+	config, err := config.Load()
 	if err != nil {
-		log.Fatalf(".env not found, reading system variables")
+		log.Fatal("Error loading config")
 	}
 
-	requiredVars := []string{"TEMPMAIL_DOMAINS", "TEMPMAIL_EXPIRATION_ENABLED", "TEMPMAIL_EPIRATION_TIME"}
-	missingVars := []string{}
-
-	for _, v := range requiredVars {
-		if os.Getenv(v) == "" {
-			missingVars = append(missingVars, v)
-		}
-	}
-
-	if len(missingVars) > 0 {
-		log.Fatalf("Missing required environment variables: %v", missingVars)
-		log.Fatalf("Server going down")
-		return
-	}
-
-	_ = os.Getenv("TEMPMAIL_DOMAINS")
+	db := models.SetupDatabase(config)
+	backend := &Backend{db: db}
 
 	// Create a new SMTP server
 	server := smtp.NewServer(backend)
