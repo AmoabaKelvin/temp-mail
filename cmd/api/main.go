@@ -19,19 +19,18 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 
-	dsn := os.Getenv("DB_ADDR")
-	db, err := database.New(dsn)
+	config, err := config.Load()
+	if err != nil {
+		log.Fatal("Error loading config")
+	}
+
+	db, err := database.New(config.DatabaseURL)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
 	repository := repository.New(db)
 	handler := handlers.New(repository)
-
-	config, err := config.Load()
-	if err != nil {
-		log.Fatal("Error loading config")
-	}
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)

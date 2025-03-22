@@ -96,7 +96,6 @@ func (h *Handler) GetMessages(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(messages)
 }
 
-// DeleteMessage handles requests to delete a specific message
 func (h *Handler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 
