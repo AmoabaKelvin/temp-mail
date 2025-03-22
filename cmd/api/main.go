@@ -30,7 +30,7 @@ func main() {
 	}
 
 	repository := repository.New(db)
-	handler := handlers.New(repository)
+	handler := handlers.New(repository, config)
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)

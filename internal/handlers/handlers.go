@@ -3,21 +3,24 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/AmoabaKelvin/temp-mail/internal/repository"
+	"github.com/AmoabaKelvin/temp-mail/pkg/config"
 	models "github.com/AmoabaKelvin/temp-mail/pkg/dto"
 	gonanoid "github.com/matoous/go-nanoid/v2"
 )
 
 type Handler struct {
-	repo *repository.Repository
+	repo   *repository.Repository
+	config *config.Config
 }
 
-func New(repo *repository.Repository) *Handler {
-	return &Handler{repo: repo}
+func New(repo *repository.Repository, config *config.Config) *Handler {
+	return &Handler{repo: repo, config: config}
 }
 
 func (h *Handler) generateAddress() models.Address {
@@ -26,10 +29,10 @@ func (h *Handler) generateAddress() models.Address {
 		panic(err)
 	}
 
-	domain := "example.com" // TODO: Change this to your actual domain
+	domain := h.config.TempmailDomains[rand.Intn(len(h.config.TempmailDomains))]
 	return models.Address{
 		Email:     fmt.Sprintf("%s@%s", id, domain),
-		ExpiresAt: time.Now().Add(24 * time.Hour),
+		ExpiresAt: time.Now().Add(h.config.ExpireAfter),
 	}
 }
 
