@@ -1,4 +1,4 @@
-package internal
+package database
 
 import (
 	"context"
@@ -9,17 +9,21 @@ import (
 	_ "github.com/lib/pq"
 )
 
-func ConnectDB(dsn string) *sql.DB {
+type DB struct {
+	*sql.DB
+}
+
+func New(dsn string) (*DB, error) {
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
-		log.Fatal("Failed to connect to database:", err)
+		return nil, err
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	if err = db.PingContext(ctx); err != nil {
-		log.Fatal("Database ping failed:", err)
+		return nil, err
 	}
 
 	db.SetMaxOpenConns(10)
@@ -27,5 +31,5 @@ func ConnectDB(dsn string) *sql.DB {
 	db.SetConnMaxIdleTime(5 * time.Minute)
 
 	log.Println("Connected to the database successfully")
-	return db
+	return &DB{db}, nil
 }
