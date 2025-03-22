@@ -8,10 +8,11 @@ import (
 	"strconv"
 	"time"
 
+	models "github.com/AmoabaKelvin/temp-mail/pkg/dto"
 	gonanoid "github.com/matoous/go-nanoid/v2"
 )
 
-func generateAddress() Address {
+func generateAddress() models.Address {
 	id, err := gonanoid.New()
 	if err != nil {
 		panic(err)
@@ -19,9 +20,9 @@ func generateAddress() Address {
 
 	domain := "example.com" // TODO: Change this to your actual domain
 
-	return Address{
+	return models.Address{
 		Email:     fmt.Sprintf("%s@%s", id, domain),
-		ExpiresAt: time.Now().Add(24 * time.Hour).Format(time.RFC3339),
+		ExpiresAt: time.Now().Add(24 * time.Hour),
 	}
 }
 
@@ -41,14 +42,14 @@ func GenerateAddressHandler(db *sql.DB) http.HandlerFunc {
 
 func CreateMessageHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var message Message
+		var message models.Message
 
 		if err := json.NewDecoder(r.Body).Decode(&message); err != nil {
 			http.Error(w, "Invalid request payload", http.StatusBadRequest)
 			return
 		}
 
-		if message.FromAddress == "" || message.ToAddressID == 0 || message.ReceivedAt == "" {
+		if message.FromAddress == "" || message.ToAddressID == 0 || message.ReceivedAt.IsZero() {
 			http.Error(w, "Missing required fields", http.StatusBadRequest)
 			return
 		}
@@ -82,7 +83,7 @@ func GetMessagesHandler(db *sql.DB) http.HandlerFunc {
 
 		messages, err := GetMessagesByRecipient(db, address.ID)
 		if err == ErrRecordNotFound {
-			json.NewEncoder(w).Encode([]Message{})
+			json.NewEncoder(w).Encode([]models.Message{})
 			return
 		} else if err != nil {
 			http.Error(w, "Database error", http.StatusInternalServerError)
@@ -101,13 +102,13 @@ func DeleteMessageHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		id, err := strconv.ParseInt(idStr, 10, 64)
+		id, err := strconv.ParseUint(idStr, 10, 64)
 		if err != nil {
 			http.Error(w, "Invalid message ID", http.StatusBadRequest)
 			return
 		}
 
-		err = DeleteMessage(db, id)
+		err = DeleteMessage(db, uint(id))
 		if err == ErrRecordNotFound {
 			http.Error(w, "Message not found", http.StatusNotFound)
 			return
