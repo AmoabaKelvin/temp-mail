@@ -1,12 +1,17 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
+	"net/mail"
+	"os"
 	"time"
 
 	"github.com/emersion/go-smtp"
+	"github.com/joho/godotenv"
 	"gorm.io/gorm"
 
 	models "github.com/AmoabaKelvin/temp-mail/pkg/dto"
@@ -18,8 +23,19 @@ import (
 // if we check in the rcpt method, that will be one round trip to the database
 // but if we check in the mail method, we don't bother saving the email if the address is not valid
 // parse email and store it in the database
+//
 
+// todo
+//
+// 1. read in the environment variables and when there is not the type we expect or the values we want, throw an error
+// don't start the server at all
+// TEMPMAIL_DOMAINS=domain1.com,domain2.com
+// TEMPMAIL_EXPIRATION_ENABLED=true
+// TEMPMAIL_EXPIRATION_TIME=48h
+// 2. write handlers for dealing with emails with headers and stuff. So that when we are retrieving the messages from the
+// mailboxes, we just save the stress of parsing the headers on the fly
 // Backend implements SMTP server methods.
+
 type Backend struct {
 	db *gorm.DB
 }
@@ -64,13 +80,16 @@ func (s *Session) Data(r io.Reader) error {
 	} else {
 		fmt.Println("Received message:", string(b))
 
-		// todo: process the email here and store it
-		// Here you would typically process the email
+		msg, err := mail.ReadMessage(bytes.NewReader(b))
+		if err != nil {
+			return fmt.Errorf("failed to parse email: %w", err)
+		}
 
-		// steps to processing and storing the email
-		// figure out if the receiver is in our database
-		// if the receiver is in, create a new message record associated to the user
-		// if the user is not present, just ignore the email
+		headersJSON, err := json.Marshal(msg.Header)
+		if err != nil {
+			return fmt.Errorf("failed to marshal headers: %w", err)
+		}
+
 		var address models.Address
 		if err := s.db.Where("email = ?", s.To[0]).First(&address).Error; err != nil {
 			return fmt.Errorf("Receiver not found")
@@ -81,10 +100,9 @@ func (s *Session) Data(r io.Reader) error {
 			FromAddress: s.From,
 			ToAddressID: address.ID,
 			ReceivedAt:  time.Now(),
-			Subject:     "",
+			Subject:     msg.Header.Get("Subject"),
+			Headers:     headersJSON,
 		}
-
-		// todo: think about figuring out how to get the subject from the email
 
 		if err := s.db.Create(&message).Error; err != nil {
 			return err
