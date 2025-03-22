@@ -122,6 +122,29 @@ func startMailServer() {
 	db := models.SetupDatabase()
 	backend := &Backend{db: db}
 
+	//Read config from the environment
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatalf(".env not found, reading system variables")
+	}
+
+	requiredVars := []string{"TEMPMAIL_DOMAINS", "TEMPMAIL_EXPIRATION_ENABLED", "TEMPMAIL_EPIRATION_TIME"}
+	missingVars := []string{}
+
+	for _, v := range requiredVars {
+		if os.Getenv(v) == "" {
+			missingVars = append(missingVars, v)
+		}
+	}
+
+	if len(missingVars) > 0 {
+		log.Fatalf("Missing required environment variables: %v", missingVars)
+		log.Fatalf("Server going down")
+		return
+	}
+
+	_ = os.Getenv("TEMPMAIL_DOMAINS")
+
 	// Create a new SMTP server
 	server := smtp.NewServer(backend)
 
