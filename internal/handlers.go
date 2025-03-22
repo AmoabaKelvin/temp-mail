@@ -4,31 +4,34 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"strconv"
 	"time"
 
+	"github.com/AmoabaKelvin/temp-mail/pkg/config"
 	models "github.com/AmoabaKelvin/temp-mail/pkg/dto"
 	gonanoid "github.com/matoous/go-nanoid/v2"
 )
 
-func generateAddress() models.Address {
+func generateAddress(config *config.Config) models.Address {
 	id, err := gonanoid.New()
 	if err != nil {
 		panic(err)
 	}
 
-	domain := "example.com" // TODO: Change this to your actual domain
+	// select a random domain from the config
+	domain := config.TempmailDomains[rand.Intn(len(config.TempmailDomains))]
 
 	return models.Address{
 		Email:     fmt.Sprintf("%s@%s", id, domain),
-		ExpiresAt: time.Now().Add(24 * time.Hour),
+		ExpiresAt: time.Now().Add(config.ExpireAfter),
 	}
 }
 
-func GenerateAddressHandler(db *sql.DB) http.HandlerFunc {
+func GenerateAddressHandler(db *sql.DB, config *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		address := generateAddress()
+		address := generateAddress(config)
 
 		if err := InsertAddress(db, &address); err != nil {
 			http.Error(w, "Failed to insert address", http.StatusInternalServerError)
