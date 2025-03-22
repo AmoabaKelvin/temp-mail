@@ -3,9 +3,9 @@ package main
 import (
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/AmoabaKelvin/temp-mail/internal"
+	"github.com/AmoabaKelvin/temp-mail/pkg/config"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/joho/godotenv"
@@ -17,8 +17,12 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 
-	dsn := os.Getenv("DB_ADDR")
-	db := internal.ConnectDB(dsn)
+	config, err := config.Load()
+	if err != nil {
+		log.Fatal("Error loading config")
+	}
+
+	db := internal.ConnectDB(config.DatabaseURL)
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
