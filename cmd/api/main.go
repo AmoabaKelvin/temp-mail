@@ -27,7 +27,7 @@ func main() {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 
-	r.Post("/v1/generate_address", internal.GenerateAddressHandler(db))
+	r.Post("/v1/generate_address", internal.GenerateAddressHandler(db, config))
 	r.Post("/v1/create_message", internal.CreateMessageHandler(db))
 	r.Get("/v1/get_messages", internal.GetMessagesHandler(db))
 	r.Delete("/v1/delete_message", internal.DeleteMessageHandler(db))
