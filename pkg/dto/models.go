@@ -3,8 +3,11 @@ package models
 import (
 	"fmt"
 	"log"
+	"os"
 	"time"
 
+	"github.com/joho/godotenv"
+	"gorm.io/datatypes"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -24,21 +27,26 @@ type Address struct {
 
 // Message represents a simple email message
 type Message struct {
-	ID          uint      `gorm:"primaryKey"`
-	FromAddress string    `gorm:"type:varchar(255);not null"`
-	ToAddressID uint      `gorm:"index"`
-	ToAddress   Address   `gorm:"foreignKey:ToAddressID"`
-	Subject     string    `gorm:"type:varchar(255)"`
-	Body        string    `gorm:"type:text"`
-	ReceivedAt  time.Time `gorm:"index"`
+	ID          uint           `gorm:"primaryKey"`
+	FromAddress string         `gorm:"type:varchar(255);not null"`
+	ToAddressID uint           `gorm:"index"`
+	ToAddress   Address        `gorm:"foreignKey:ToAddressID"`
+	Headers     datatypes.JSON `gorm:"type:jsonb"`
+	Subject     string         `gorm:"type:varchar(255)"`
+	Body        string         `gorm:"type:text"`
+	ReceivedAt  time.Time      `gorm:"index"`
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 	DeletedAt   gorm.DeletedAt `gorm:"index"`
 }
 
 func SetupDatabase() *gorm.DB {
-	dsn := "host=localhost user=postgres password=yourpassword dbname=smtp port=5432 sslmode=disable TimeZone=UTC"
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatalf("Failed to load .env file: %v", err)
+	}
 
+	dsn := os.Getenv("DATABASE_URL")
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
