@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -48,28 +49,6 @@ func (h *Handler) GenerateAddress(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(address)
 }
 
-func (h *Handler) CreateMessage(w http.ResponseWriter, r *http.Request) {
-	var message models.Message
-
-	if err := json.NewDecoder(r.Body).Decode(&message); err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
-		return
-	}
-
-	if message.FromAddress == "" || message.ToAddressID == 0 || message.ReceivedAt.IsZero() {
-		http.Error(w, "Missing required fields", http.StatusBadRequest)
-		return
-	}
-
-	if err := h.repo.InsertMessage(&message); err != nil {
-		http.Error(w, "Failed to insert message", http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(message)
-}
-
 func (h *Handler) GetMessages(w http.ResponseWriter, r *http.Request) {
 	email := r.URL.Query().Get("email")
 
@@ -79,7 +58,7 @@ func (h *Handler) GetMessages(w http.ResponseWriter, r *http.Request) {
 	}
 
 	address, err := h.repo.GetAddressByEmail(email)
-	if err == repository.ErrRecordNotFound {
+	if errors.Is(err, repository.ErrRecordNotFound) {
 		http.Error(w, "Recipient not found", http.StatusNotFound)
 		return
 	} else if err != nil {
@@ -88,10 +67,7 @@ func (h *Handler) GetMessages(w http.ResponseWriter, r *http.Request) {
 	}
 
 	messages, err := h.repo.GetMessagesByRecipient(address.ID)
-	if err == repository.ErrRecordNotFound {
-		json.NewEncoder(w).Encode([]models.Message{})
-		return
-	} else if err != nil {
+	if err != nil {
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
@@ -114,7 +90,7 @@ func (h *Handler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = h.repo.DeleteMessage(uint(id))
-	if err == repository.ErrRecordNotFound {
+	if errors.Is(err, repository.ErrRecordNotFound) {
 		http.Error(w, "Message not found", http.StatusNotFound)
 		return
 	} else if err != nil {

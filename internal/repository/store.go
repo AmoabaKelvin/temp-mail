@@ -3,15 +3,19 @@ package repository
 import (
 	"database/sql"
 	"errors"
+	"fmt"
+	"time"
 
 	"github.com/AmoabaKelvin/temp-mail/internal/database"
+	"github.com/AmoabaKelvin/temp-mail/pkg/config"
 	models "github.com/AmoabaKelvin/temp-mail/pkg/dto"
 )
 
 var ErrRecordNotFound = errors.New("record not found")
 
 type Repository struct {
-	db *database.DB
+	db     *database.DB
+	config *config.Config
 }
 
 func New(db *database.DB) *Repository {
@@ -27,10 +31,19 @@ func (r *Repository) GetAddressByEmail(email string) (*models.Address, error) {
 	address := &models.Address{}
 	query := `SELECT id, email, expires_at FROM addresses WHERE email = $1`
 	err := r.db.QueryRow(query, email).Scan(&address.ID, &address.Email, &address.ExpiresAt)
+
 	if err == sql.ErrNoRows {
 		return nil, ErrRecordNotFound
 	}
-	return address, err
+	if err != nil {
+		return nil, fmt.Errorf("database error: %v", err)
+	}
+
+	if r.config.ExpirationEnabled && address.ExpiresAt.Before(time.Now()) {
+		return nil, fmt.Errorf("address has expired")
+	}
+
+	return address, nil
 }
 
 func (r *Repository) InsertMessage(message *models.Message) error {
@@ -71,9 +84,6 @@ func (r *Repository) GetMessagesByRecipient(toAddressID uint) ([]models.Message,
 		messages = append(messages, msg)
 	}
 
-	if len(messages) == 0 {
-		return nil, ErrRecordNotFound
-	}
 	return messages, nil
 }
 
