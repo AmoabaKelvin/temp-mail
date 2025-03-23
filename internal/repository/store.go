@@ -31,10 +31,19 @@ func (r *Repository) GetAddressByEmail(email string) (*models.Address, error) {
 	address := &models.Address{}
 	query := `SELECT id, email, expires_at FROM addresses WHERE email = $1`
 	err := r.db.QueryRow(query, email).Scan(&address.ID, &address.Email, &address.ExpiresAt)
+
 	if err == sql.ErrNoRows {
 		return nil, ErrRecordNotFound
 	}
-	return address, err
+	if err != nil {
+		return nil, fmt.Errorf("database error: %v", err)
+	}
+
+	if r.config.ExpirationEnabled && address.ExpiresAt.Unix() < time.Now().Unix() {
+		return nil, fmt.Errorf("address has expired")
+	}
+
+	return address, nil
 }
 
 func (r *Repository) InsertMessage(message *models.Message) error {
@@ -97,25 +106,4 @@ func (r *Repository) DeleteMessage(id uint) error {
 		return ErrRecordNotFound
 	}
 	return nil
-}
-
-func (r *Repository) IsAddressExpired(id uint) (bool, error) {
-	expirationEnabled := r.config.ExpirationEnabled
-	if !expirationEnabled {
-		return false, nil
-	}
-
-	query := `SELECT expires_at FROM addresses WHERE id = $1`
-	var expiresAt int64
-	err := r.db.QueryRow(query, id).Scan(&expiresAt)
-
-	if err == sql.ErrNoRows {
-		return false, nil
-	}
-
-	if err != nil {
-		return false, fmt.Errorf("database error checking expiration: %v", err)
-	}
-
-	return expiresAt < time.Now().Unix(), nil
 }

@@ -65,17 +65,6 @@ func (h *Handler) GetMessages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	isExpired, err := h.repo.IsAddressExpired(address.ID)
-	if err != nil {
-		http.Error(w, "Failed to check address expiry", http.StatusInternalServerError)
-		return
-	}
-
-	if isExpired {
-		http.Error(w, "Address expired", http.StatusBadRequest)
-		return
-	}
-
 	messages, err := h.repo.GetMessagesByRecipient(address.ID)
 	if err == repository.ErrRecordNotFound {
 		json.NewEncoder(w).Encode([]models.Message{})
