@@ -26,14 +26,14 @@ type Address struct {
 
 // Message represents a simple email message
 type Message struct {
-	ID          uint           `gorm:"primaryKey"`
-	FromAddress string         `gorm:"type:varchar(255);not null"`
+	ID          uint           `gorm:"primaryKey" json:"id"`
+	FromAddress string         `gorm:"type:varchar(255);not null" json:"from_address"`
 	ToAddressID uint           `gorm:"index" json:"-"`
 	ToAddress   Address        `gorm:"foreignKey:ToAddressID" json:"-"`
 	Headers     datatypes.JSON `gorm:"type:jsonb"`
-	Subject     string         `gorm:"type:varchar(255)"`
-	Body        string         `gorm:"type:text"`
-	ReceivedAt  time.Time      `gorm:"index"`
+	Subject     string         `gorm:"type:varchar(255)" json:"subject"`
+	Body        string         `gorm:"type:text" json:"body"`
+	ReceivedAt  time.Time      `gorm:"index" json:"received_at"`
 	CreatedAt   time.Time      `json:"-"`
 	UpdatedAt   time.Time      `json:"-"`
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
