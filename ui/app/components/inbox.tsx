@@ -1,7 +1,7 @@
 "use client";
 
 import { Clock, RefreshCw, Search } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,23 +10,37 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle
+  CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "@/components/ui/use-toast";
 
-import { sampleEmails } from "../lib/sample-data";
+import { deleteMessage, EmailMessage, getMessages } from "../lib/api-client";
 
 import { EmailDetail } from "./email-detail";
 import { EmailItem } from "./email-item";
 
 import type { Email } from "../lib/types";
 
+// Convert API EmailMessage to UI Email format
+const convertToEmail = (apiMessage: EmailMessage): Email => {
+  return {
+    id: apiMessage.id.toString(),
+    from: apiMessage.from_address,
+    subject: apiMessage.subject || "No Subject",
+    content: apiMessage.body,
+    timestamp: new Date(apiMessage.received_at),
+    read: true,
+  };
+};
+
 export function Inbox() {
-  const [emails, setEmails] = useState<Email[]>(sampleEmails);
+  const [emails, setEmails] = useState<Email[]>([]);
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  const [currentEmail, setCurrentEmail] = useState<string | null>(null);
 
   const unreadCount = emails.filter((email) => !email.read).length;
 
@@ -37,12 +51,49 @@ export function Inbox() {
       email.content.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleRefresh = () => {
+  // Load current email from localStorage on initial load
+  useEffect(() => {
+    const storedEmail = localStorage.getItem("currentEmail");
+    if (storedEmail) {
+      setCurrentEmail(storedEmail);
+      fetchMessages(storedEmail);
+    }
+  }, []);
+
+  // Fetch messages when current email changes
+  const fetchMessages = async (email: string) => {
+    if (!email) return;
+
     setRefreshing(true);
-    // Simulate fetching new emails
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
+    const response = await getMessages(email);
+    setRefreshing(false);
+
+    if (response.error) {
+      toast({
+        title: "Error loading messages",
+        description: response.error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (response.data) {
+      // Convert API messages to UI Email format
+      const convertedEmails = response.data.map(convertToEmail);
+      setEmails(convertedEmails);
+    }
+  };
+
+  const handleRefresh = () => {
+    if (currentEmail) {
+      fetchMessages(currentEmail);
+    } else {
+      toast({
+        title: "No email selected",
+        description: "Generate an email address first.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleEmailSelect = (email: Email) => {
@@ -57,20 +108,51 @@ export function Inbox() {
   };
 
   const handleArchive = (emailId: string) => {
-    const updatedEmails = emails.filter((email) => email.id !== emailId);
-    setEmails(updatedEmails);
-    if (selectedEmail?.id === emailId) {
-      setSelectedEmail(null);
-    }
+    // For now, archiving is the same as deleting
+    handleDelete(emailId);
   };
 
-  const handleDelete = (emailId: string) => {
+  const handleDelete = async (emailId: string) => {
+    // Delete from API
+    const response = await deleteMessage(parseInt(emailId));
+
+    if (response.error) {
+      toast({
+        title: "Error deleting message",
+        description: response.error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Update UI after successful deletion
     const updatedEmails = emails.filter((email) => email.id !== emailId);
     setEmails(updatedEmails);
+
     if (selectedEmail?.id === emailId) {
       setSelectedEmail(null);
     }
+
+    toast({
+      title: "Message deleted",
+      description: "The message was successfully deleted.",
+    });
   };
+
+  // Set current email (called from parent component)
+  useEffect(() => {
+    // This is where we would set up to listen for email address changes
+    const handleStorageChange = () => {
+      const storedEmail = localStorage.getItem("currentEmail");
+      if (storedEmail && storedEmail !== currentEmail) {
+        setCurrentEmail(storedEmail);
+        fetchMessages(storedEmail);
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, [currentEmail]);
 
   return (
     <Card className="h-full">
@@ -78,13 +160,19 @@ export function Inbox() {
         <div>
           <CardTitle className="text-xl">Inbox</CardTitle>
           <CardDescription>
-            {unreadCount > 0 ? (
+            {currentEmail ? (
               <span className="flex items-center gap-2">
-                You have <Badge variant="secondary">{unreadCount}</Badge> unread
-                messages
+                {unreadCount > 0 ? (
+                  <>
+                    You have <Badge variant="secondary">{unreadCount}</Badge>{" "}
+                    unread messages
+                  </>
+                ) : (
+                  "No new messages"
+                )}
               </span>
             ) : (
-              "No new messages"
+              "Generate an email to view messages"
             )}
           </CardDescription>
         </div>
@@ -92,7 +180,7 @@ export function Inbox() {
           variant="outline"
           size="icon"
           onClick={handleRefresh}
-          disabled={refreshing}
+          disabled={refreshing || !currentEmail}
         >
           <RefreshCw
             className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
@@ -142,12 +230,13 @@ export function Inbox() {
                   ))
                 ) : (
                   <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-                    {/* <Inbox className="h-12 w-12 mb-4" /> */}
                     <h3 className="text-lg font-medium">No emails found</h3>
                     <p className="text-sm">
                       {searchQuery
                         ? "Try a different search term"
-                        : "Your inbox is empty"}
+                        : currentEmail
+                        ? "Your inbox is empty"
+                        : "Generate an email address first"}
                     </p>
                   </div>
                 )}
@@ -169,12 +258,13 @@ export function Inbox() {
                     ))
                 ) : (
                   <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-                    {/* <Inbox className="h-12 w-12 mb-4" /> */}
                     <h3 className="text-lg font-medium">No unread emails</h3>
                     <p className="text-sm">
                       {searchQuery
                         ? "Try a different search term"
-                        : "You're all caught up!"}
+                        : currentEmail
+                        ? "You're all caught up!"
+                        : "Generate an email address first"}
                     </p>
                   </div>
                 )}
@@ -193,7 +283,9 @@ export function Inbox() {
                   <Clock className="h-12 w-12 mb-4" />
                   <h3 className="text-lg font-medium">No email selected</h3>
                   <p className="text-sm">
-                    Select an email to view its contents
+                    {currentEmail
+                      ? "Select an email to view its contents"
+                      : "Generate an email address first"}
                   </p>
                 </div>
               )}
