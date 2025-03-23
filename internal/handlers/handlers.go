@@ -61,6 +61,17 @@ func (h *Handler) CreateMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	isExpired, err := h.repo.IsAddressExpired(message.ToAddressID)
+	if err != nil {
+		http.Error(w, "Failed to check address expiry", http.StatusInternalServerError)
+		return
+	}
+
+	if isExpired {
+		http.Error(w, "Address expired", http.StatusBadRequest)
+		return
+	}
+
 	if err := h.repo.InsertMessage(&message); err != nil {
 		http.Error(w, "Failed to insert message", http.StatusInternalServerError)
 		return
@@ -84,6 +95,17 @@ func (h *Handler) GetMessages(w http.ResponseWriter, r *http.Request) {
 		return
 	} else if err != nil {
 		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	isExpired, err := h.repo.IsAddressExpired(address.ID)
+	if err != nil {
+		http.Error(w, "Failed to check address expiry", http.StatusInternalServerError)
+		return
+	}
+
+	if isExpired {
+		http.Error(w, "Address expired", http.StatusBadRequest)
 		return
 	}
 

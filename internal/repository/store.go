@@ -3,15 +3,19 @@ package repository
 import (
 	"database/sql"
 	"errors"
+	"fmt"
+	"time"
 
 	"github.com/AmoabaKelvin/temp-mail/internal/database"
+	"github.com/AmoabaKelvin/temp-mail/pkg/config"
 	models "github.com/AmoabaKelvin/temp-mail/pkg/dto"
 )
 
 var ErrRecordNotFound = errors.New("record not found")
 
 type Repository struct {
-	db *database.DB
+	db     *database.DB
+	config *config.Config
 }
 
 func New(db *database.DB) *Repository {
@@ -93,4 +97,25 @@ func (r *Repository) DeleteMessage(id uint) error {
 		return ErrRecordNotFound
 	}
 	return nil
+}
+
+func (r *Repository) IsAddressExpired(id uint) (bool, error) {
+	expirationEnabled := r.config.ExpirationEnabled
+	if !expirationEnabled {
+		return false, nil
+	}
+
+	query := `SELECT expires_at FROM addresses WHERE id = $1`
+	var expiresAt int64
+	err := r.db.QueryRow(query, id).Scan(&expiresAt)
+
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+
+	if err != nil {
+		return false, fmt.Errorf("database error checking expiration: %v", err)
+	}
+
+	return expiresAt < time.Now().Unix(), nil
 }
