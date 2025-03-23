@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -57,7 +58,7 @@ func (h *Handler) GetMessages(w http.ResponseWriter, r *http.Request) {
 	}
 
 	address, err := h.repo.GetAddressByEmail(email)
-	if err == repository.ErrRecordNotFound {
+	if errors.Is(err, repository.ErrRecordNotFound) {
 		http.Error(w, "Recipient not found", http.StatusNotFound)
 		return
 	} else if err != nil {
@@ -89,7 +90,7 @@ func (h *Handler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = h.repo.DeleteMessage(uint(id))
-	if err == repository.ErrRecordNotFound {
+	if errors.Is(err, repository.ErrRecordNotFound) {
 		http.Error(w, "Message not found", http.StatusNotFound)
 		return
 	} else if err != nil {
