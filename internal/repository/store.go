@@ -84,9 +84,6 @@ func (r *Repository) GetMessagesByRecipient(toAddressID uint) ([]models.Message,
 		messages = append(messages, msg)
 	}
 
-	if len(messages) == 0 {
-		return nil, ErrRecordNotFound
-	}
 	return messages, nil
 }
 

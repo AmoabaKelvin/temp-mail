@@ -66,10 +66,7 @@ func (h *Handler) GetMessages(w http.ResponseWriter, r *http.Request) {
 	}
 
 	messages, err := h.repo.GetMessagesByRecipient(address.ID)
-	if err == repository.ErrRecordNotFound {
-		json.NewEncoder(w).Encode([]models.Message{})
-		return
-	} else if err != nil {
+	if err != nil {
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
