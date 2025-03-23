@@ -36,7 +36,6 @@ func main() {
 	r.Use(middleware.Logger)
 
 	r.Post("/v1/generate_address", handler.GenerateAddress)
-	r.Post("/v1/create_message", handler.CreateMessage)
 	r.Get("/v1/get_messages", handler.GetMessages)
 	r.Delete("/v1/delete_message", handler.DeleteMessage)
 

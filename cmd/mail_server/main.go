@@ -94,6 +94,10 @@ func (s *Session) Data(r io.Reader) error {
 			return fmt.Errorf("Receiver not found")
 		}
 
+		if address.ExpiresAt.Before(time.Now()) {
+			return fmt.Errorf("receiver address has expired")
+		}
+
 		message := models.Message{
 			Body:        string(b),
 			FromAddress: s.From,
