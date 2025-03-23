@@ -39,7 +39,7 @@ func (r *Repository) GetAddressByEmail(email string) (*models.Address, error) {
 		return nil, fmt.Errorf("database error: %v", err)
 	}
 
-	if r.config.ExpirationEnabled && address.ExpiresAt.Unix() < time.Now().Unix() {
+	if r.config.ExpirationEnabled && address.ExpiresAt.Before(time.Now()) {
 		return nil, fmt.Errorf("address has expired")
 	}
 
