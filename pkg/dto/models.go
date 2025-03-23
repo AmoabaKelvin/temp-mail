@@ -28,15 +28,15 @@ type Address struct {
 type Message struct {
 	ID          uint           `gorm:"primaryKey"`
 	FromAddress string         `gorm:"type:varchar(255);not null"`
-	ToAddressID uint           `gorm:"index"`
-	ToAddress   Address        `gorm:"foreignKey:ToAddressID"`
+	ToAddressID uint           `gorm:"index" json:"-"`
+	ToAddress   Address        `gorm:"foreignKey:ToAddressID" json:"-"`
 	Headers     datatypes.JSON `gorm:"type:jsonb"`
 	Subject     string         `gorm:"type:varchar(255)"`
 	Body        string         `gorm:"type:text"`
 	ReceivedAt  time.Time      `gorm:"index"`
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	DeletedAt   gorm.DeletedAt `gorm:"index"`
+	CreatedAt   time.Time      `json:"-"`
+	UpdatedAt   time.Time      `json:"-"`
+	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 func SetupDatabase(config *config.Config) *gorm.DB {
