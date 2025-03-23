@@ -13,15 +13,15 @@ import (
 
 // Address represents an email address with expiration
 type Address struct {
-	ID        uint      `gorm:"primaryKey"`
-	Email     string    `gorm:"type:varchar(255);uniqueIndex;not null"`
-	ExpiresAt time.Time `gorm:"index"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	DeletedAt gorm.DeletedAt `gorm:"index"`
+	ID        uint           `gorm:"primaryKey" json:"-"`
+	Email     string         `gorm:"type:varchar(255);uniqueIndex;not null" json:"email"`
+	ExpiresAt time.Time      `gorm:"index" json:"expires_at"`
+	CreatedAt time.Time      `json:"-"`
+	UpdatedAt time.Time      `json:"-"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 
 	// Relations
-	ReceivedMessages []Message `gorm:"foreignKey:ToAddressID"`
+	ReceivedMessages []Message `gorm:"foreignKey:ToAddressID" json:"-"`
 }
 
 // Message represents a simple email message
