@@ -46,6 +46,9 @@ export function Inbox() {
   const [searchQuery, setSearchQuery] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [currentEmail, setCurrentEmail] = useState<string | null>(null);
+  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(
+    null
+  );
 
   const unreadCount = emails.filter((email) => !email.read).length;
 
@@ -88,6 +91,31 @@ export function Inbox() {
       setEmails(convertedEmails);
     }
   };
+
+  // Set up polling for new emails every 30 seconds
+  useEffect(() => {
+    if (currentEmail) {
+      // Clear any existing interval
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+      }
+
+      fetchMessages(currentEmail);
+
+      // Set up new polling interval (every 30 seconds)
+      const interval = setInterval(() => {
+        setRefreshing(true);
+        fetchMessages(currentEmail);
+      }, 30000);
+
+      setPollingInterval(interval);
+
+      // Clean up interval on unmount or when currentEmail changes
+      return () => {
+        if (interval) clearInterval(interval);
+      };
+    }
+  }, [currentEmail]);
 
   const handleRefresh = () => {
     if (currentEmail) {
