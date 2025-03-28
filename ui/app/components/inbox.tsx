@@ -16,7 +16,12 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/components/ui/use-toast";
 
-import { deleteMessage, EmailMessage, getMessages } from "../lib/api-client";
+import {
+  deleteMessage,
+  EmailMessage,
+  getMessages,
+  updateMessageReadStatus,
+} from "../lib/api-client";
 
 import { EmailDetail } from "./email-detail";
 import { EmailItem } from "./email-item";
@@ -31,7 +36,7 @@ const convertToEmail = (apiMessage: EmailMessage): Email => {
     subject: apiMessage.subject || "No Subject",
     content: apiMessage.body,
     timestamp: new Date(apiMessage.received_at),
-    read: true,
+    read: apiMessage.read_at !== null,
   };
 };
 
@@ -96,13 +101,30 @@ export function Inbox() {
     }
   };
 
-  const handleEmailSelect = (email: Email) => {
+  const handleEmailSelect = async (email: Email) => {
     // Mark as read when selected
     if (!email.read) {
+      // Update UI optimistically
       const updatedEmails = emails.map((e) =>
         e.id === email.id ? { ...e, read: true } : e
       );
       setEmails(updatedEmails);
+
+      // Call API to update read status
+      const response = await updateMessageReadStatus(parseInt(email.id));
+      if (response.error) {
+        // Revert UI change if API call fails
+        const revertedEmails = emails.map((e) =>
+          e.id === email.id ? { ...e, read: false } : e
+        );
+        setEmails(revertedEmails);
+
+        toast({
+          title: "Error marking as read",
+          description: response.error.message,
+          variant: "destructive",
+        });
+      }
     }
     setSelectedEmail(email);
   };
@@ -137,6 +159,48 @@ export function Inbox() {
       title: "Message deleted",
       description: "The message was successfully deleted.",
     });
+  };
+
+  const handleToggleRead = async (emailId: string) => {
+    try {
+      const response = await updateMessageReadStatus(parseInt(emailId));
+
+      if (response.error) {
+        toast({
+          title: "Error updating read status",
+          description: response.error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Toggle the read status in the UI
+      const updatedEmails = emails.map((email) =>
+        email.id === emailId ? { ...email, read: !email.read } : email
+      );
+      setEmails(updatedEmails);
+
+      // Update selected email if it's the one being toggled
+      if (selectedEmail?.id === emailId) {
+        setSelectedEmail({
+          ...selectedEmail,
+          read: !selectedEmail.read,
+        });
+      }
+
+      toast({
+        title: `Marked as ${
+          updatedEmails.find((e) => e.id === emailId)?.read ? "read" : "unread"
+        }`,
+        description: "Email status updated successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error updating read status",
+        description: "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Set current email (called from parent component)
@@ -226,6 +290,7 @@ export function Inbox() {
                       onSelect={() => handleEmailSelect(email)}
                       onArchive={() => handleArchive(email.id)}
                       onDelete={() => handleDelete(email.id)}
+                      onToggleRead={() => handleToggleRead(email.id)}
                     />
                   ))
                 ) : (
@@ -254,6 +319,7 @@ export function Inbox() {
                         onSelect={() => handleEmailSelect(email)}
                         onArchive={() => handleArchive(email.id)}
                         onDelete={() => handleDelete(email.id)}
+                        onToggleRead={() => handleToggleRead(email.id)}
                       />
                     ))
                 ) : (
@@ -277,6 +343,7 @@ export function Inbox() {
                   email={selectedEmail}
                   onArchive={() => handleArchive(selectedEmail.id)}
                   onDelete={() => handleDelete(selectedEmail.id)}
+                  onToggleRead={() => handleToggleRead(selectedEmail.id)}
                 />
               ) : (
                 <div className="flex flex-col items-center justify-center h-full py-12 text-center text-muted-foreground">
