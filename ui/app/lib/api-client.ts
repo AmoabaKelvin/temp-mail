@@ -25,6 +25,7 @@ export interface EmailMessage {
   subject: string;
   body: string;
   received_at: string;
+  read_at: string | null;
 }
 
 // Generic fetch helper
@@ -84,5 +85,13 @@ export async function deleteMessage(
 ): Promise<ApiResponse<{ message: string }>> {
   return apiFetch<{ message: string }>(`/v1/messages/${id}`, {
     method: "DELETE",
+  });
+}
+
+export async function updateMessageReadStatus(
+  id: number
+): Promise<ApiResponse<{ message: string }>> {
+  return apiFetch<{ message: string }>(`/v1/messages/${id}/read`, {
+    method: "PUT",
   });
 }
