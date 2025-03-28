@@ -49,7 +49,7 @@ func main() {
 	r.Post("/v1/addresses", handler.GenerateAddress)
 	r.Get("/v1/messages", handler.GetMessages)
 	r.Delete("/v1/messages/{id}", handler.DeleteMessage)
-
+	r.Put("/v1/messages/{id}/read", handler.UpdateMessageReadAt)
 	log.Println("Starting server on :8080")
 	http.ListenAndServe(":8080", r)
 }
