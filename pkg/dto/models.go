@@ -24,7 +24,9 @@ type Address struct {
 	ReceivedMessages []Message `gorm:"foreignKey:ToAddressID" json:"-"`
 }
 
-// Message represents a simple email message
+// rather than having a boolean flag for the read status, we will rather use a timestamp. with this,
+// we can not only know if the message has been read, but also the exact time it was read which can help
+// implement time-based email filters
 type Message struct {
 	ID          uint           `gorm:"primaryKey" json:"id"`
 	FromAddress string         `gorm:"type:varchar(255);not null" json:"from_address"`
@@ -34,6 +36,7 @@ type Message struct {
 	Subject     string         `gorm:"type:varchar(255)" json:"subject"`
 	Body        string         `gorm:"type:text" json:"body"`
 	ReceivedAt  time.Time      `gorm:"index" json:"received_at"`
+	ReadAt      time.Time      `json:"read_at"`
 	CreatedAt   time.Time      `json:"-"`
 	UpdatedAt   time.Time      `json:"-"`
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
