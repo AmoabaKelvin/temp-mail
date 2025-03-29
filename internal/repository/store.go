@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"errors"
+	"time"
 
 	"github.com/AmoabaKelvin/temp-mail/internal/database"
 	models "github.com/AmoabaKelvin/temp-mail/pkg/dto"
@@ -93,5 +94,15 @@ func (r *Repository) DeleteMessage(id uint) error {
 	if rowsAffected == 0 {
 		return ErrRecordNotFound
 	}
+	return nil
+}
+
+func (r *Repository) UpdateMessageReadAt(id uint, readAt time.Time) error {
+	query := `UPDATE messages SET read_at = $1 WHERE id = $2`
+	_, err := r.db.Exec(query, readAt, id)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

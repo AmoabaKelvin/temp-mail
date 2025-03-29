@@ -12,6 +12,7 @@ import (
 	"github.com/AmoabaKelvin/temp-mail/internal/repository"
 	"github.com/AmoabaKelvin/temp-mail/pkg/config"
 	models "github.com/AmoabaKelvin/temp-mail/pkg/dto"
+	"github.com/go-chi/chi/v5"
 	gonanoid "github.com/matoous/go-nanoid/v2"
 )
 
@@ -101,4 +102,27 @@ func (h *Handler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 	response := map[string]string{"message": "Message deleted successfully"}
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
+}
+
+func (h *Handler) UpdateMessageReadAt(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+
+	if idStr == "" {
+		http.Error(w, "Message ID is required", http.StatusBadRequest)
+		return
+	}
+
+	id, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid message ID", http.StatusBadRequest)
+		return
+	}
+
+	err = h.repo.UpdateMessageReadAt(uint(id), time.Now())
+	if err != nil {
+		http.Error(w, "Failed to update message read status", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }

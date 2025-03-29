@@ -98,8 +98,13 @@ func (s *Session) Data(r io.Reader) error {
 			return fmt.Errorf("receiver address has expired")
 		}
 
+		body, err := io.ReadAll(msg.Body)
+		if err != nil {
+			return fmt.Errorf("failed to read email body: %w", err)
+		}
+
 		message := models.Message{
-			Body:        string(b),
+			Body:        string(body),
 			FromAddress: s.From,
 			ToAddressID: address.ID,
 			ReceivedAt:  time.Now(),
