@@ -1,7 +1,7 @@
 "use client";
 
 import { Clock, RefreshCw, Search } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,9 @@ import { EmailItem } from "./email-item";
 
 import type { Email } from "../lib/types";
 
+const POLLING_INTERVAL_MS = 30000;
+const LOCAL_STORAGE_EMAIL_KEY = "currentEmail";
+
 // Convert API EmailMessage to UI Email format
 const convertToEmail = (apiMessage: EmailMessage): Email => {
   return {
@@ -52,16 +55,18 @@ export function Inbox() {
 
   const unreadCount = emails.filter((email) => !email.read).length;
 
-  const filteredEmails = emails.filter(
-    (email) =>
-      email.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      email.from.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      email.content.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredEmails = useMemo(() => {
+    return emails.filter(
+      (email) =>
+        email.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        email.from.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        email.content.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [emails, searchQuery]);
 
   // Load current email from localStorage on initial load
   useEffect(() => {
-    const storedEmail = localStorage.getItem("currentEmail");
+    const storedEmail = localStorage.getItem(LOCAL_STORAGE_EMAIL_KEY);
     if (storedEmail) {
       setCurrentEmail(storedEmail);
       fetchMessages(storedEmail);
@@ -106,7 +111,7 @@ export function Inbox() {
       const interval = setInterval(() => {
         setRefreshing(true);
         fetchMessages(currentEmail);
-      }, 30000);
+      }, POLLING_INTERVAL_MS);
 
       setPollingInterval(interval);
 
@@ -163,10 +168,27 @@ export function Inbox() {
   };
 
   const handleDelete = async (emailId: string) => {
-    // Delete from API
+    const originalEmails = [...emails]; // Store original state for potential revert
+    const emailToDelete = emails.find((email) => email.id === emailId);
+
+    // Optimistically update UI
+    const updatedEmails = emails.filter((email) => email.id !== emailId);
+    setEmails(updatedEmails);
+
+    if (selectedEmail?.id === emailId) {
+      setSelectedEmail(null); // Clear selection if deleted email was selected
+    }
+
     const response = await deleteMessage(parseInt(emailId));
 
     if (response.error) {
+      // Revert UI change if API call fails
+      setEmails(originalEmails);
+      // If the deleted email was selected, re-select it upon revert
+      if (selectedEmail?.id === emailId) {
+        setSelectedEmail(emailToDelete || null);
+      }
+
       toast({
         title: "Error deleting message",
         description: response.error.message,
@@ -175,14 +197,7 @@ export function Inbox() {
       return;
     }
 
-    // Update UI after successful deletion
-    const updatedEmails = emails.filter((email) => email.id !== emailId);
-    setEmails(updatedEmails);
-
-    if (selectedEmail?.id === emailId) {
-      setSelectedEmail(null);
-    }
-
+    // API call was successful
     toast({
       title: "Message deleted",
       description: "The message was successfully deleted.",
@@ -235,10 +250,12 @@ export function Inbox() {
   useEffect(() => {
     // This is where we would set up to listen for email address changes
     const handleStorageChange = () => {
-      const storedEmail = localStorage.getItem("currentEmail");
+      const storedEmail = localStorage.getItem(LOCAL_STORAGE_EMAIL_KEY);
       if (storedEmail && storedEmail !== currentEmail) {
         setCurrentEmail(storedEmail);
         fetchMessages(storedEmail);
+        setSelectedEmail(null);
+        setEmails([]);
       }
     };
 
