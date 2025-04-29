@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, Circle, Trash2 } from "lucide-react";
+import { Archive, Circle, MailOpen, MailX, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -15,6 +15,7 @@ interface EmailItemProps {
   onSelect: () => void;
   onArchive: () => void;
   onDelete: () => void;
+  onToggleRead: () => void;
 }
 
 export function EmailItem({
@@ -23,6 +24,7 @@ export function EmailItem({
   onSelect,
   onArchive,
   onDelete,
+  onToggleRead,
 }: EmailItemProps) {
   return (
     <div
@@ -55,6 +57,25 @@ export function EmailItem({
         </div>
       </div>
       <div className="mt-2 flex justify-end gap-1">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleRead();
+          }}
+          title={email.read ? "Mark as unread" : "Mark as read"}
+        >
+          {email.read ? (
+            <MailX className="h-4 w-4" />
+          ) : (
+            <MailOpen className="h-4 w-4" />
+          )}
+          <span className="sr-only">
+            {email.read ? "Mark as unread" : "Mark as read"}
+          </span>
+        </Button>
         <Button
           variant="ghost"
           size="icon"

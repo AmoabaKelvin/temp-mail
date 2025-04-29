@@ -1,17 +1,61 @@
 "use client";
 
 import { Copy, RefreshCw, Shield } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 
-import { generateRandomEmail } from "../lib/email-utils";
+import { generateEmailAddress } from "../lib/api-client";
 
 export function EmailHeader() {
-  const [email, setEmail] = useState(generateRandomEmail());
+  const [email, setEmail] = useState<string>("");
+  const [expiresAt, setExpiresAt] = useState<string>("");
   const [copying, setCopying] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch an email address on initial load
+  useEffect(() => {
+    // Check if we already have an email in localStorage
+    const storedEmail = localStorage.getItem("currentEmail");
+
+    if (storedEmail) {
+      setEmail(storedEmail);
+      setLoading(false);
+      // We don't have expiry time, but that's okay for initial load
+    } else {
+      fetchEmailAddress();
+    }
+  }, []);
+
+  const fetchEmailAddress = async () => {
+    setGenerating(true);
+    setLoading(true);
+    const response = await generateEmailAddress();
+    setGenerating(false);
+    setLoading(false);
+
+    if (response.error) {
+      toast({
+        title: "Error generating email",
+        description: response.error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (response.data) {
+      setEmail(response.data.email);
+      setExpiresAt(response.data.expires_at);
+
+      // Save to localStorage for sharing with Inbox component
+      localStorage.setItem("currentEmail", response.data.email);
+
+      // Trigger a storage event for other components to detect
+      window.dispatchEvent(new Event("storage"));
+    }
+  };
 
   const copyToClipboard = async () => {
     setCopying(true);
@@ -33,15 +77,18 @@ export function EmailHeader() {
   };
 
   const generateNewEmail = () => {
-    setGenerating(true);
-    setTimeout(() => {
-      setEmail(generateRandomEmail());
-      setGenerating(false);
-      toast({
-        title: "New email generated",
-        description: "Your temporary email address has been updated.",
-      });
-    }, 500);
+    fetchEmailAddress();
+    toast({
+      title: "Generating new email",
+      description: "Your temporary email address is being updated.",
+    });
+  };
+
+  // Format expiration time
+  const formatExpiryTime = () => {
+    if (!expiresAt) return "";
+    const expiresAtDate = new Date(expiresAt);
+    return expiresAtDate.toLocaleString();
   };
 
   return (
@@ -65,7 +112,7 @@ export function EmailHeader() {
           <div className="relative flex-1 flex items-center border rounded-md bg-white">
             <input
               type="text"
-              value={email}
+              value={loading ? "Loading..." : email}
               readOnly
               className="w-full py-3 px-4 rounded-md focus:outline-none"
             />
@@ -74,7 +121,7 @@ export function EmailHeader() {
               size="icon"
               className="absolute right-2"
               onClick={copyToClipboard}
-              disabled={copying}
+              disabled={copying || loading}
             >
               <Copy className="h-5 w-5 text-gray-500" />
               <span className="sr-only">Copy email address</span>
@@ -93,6 +140,11 @@ export function EmailHeader() {
             Change email
           </Button>
         </div>
+        {expiresAt && (
+          <div className="mt-2 text-sm text-gray-500">
+            Expires at: {formatExpiryTime()}
+          </div>
+        )}
       </div>
     </div>
   );

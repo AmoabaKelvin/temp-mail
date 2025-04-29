@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, Calendar, Trash2, User } from "lucide-react";
+import { Archive, Calendar, MailOpen, MailX, Trash2, User } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
@@ -12,14 +12,35 @@ interface EmailDetailProps {
   email: Email;
   onArchive: () => void;
   onDelete: () => void;
+  onToggleRead: () => void;
 }
 
-export function EmailDetail({ email, onArchive, onDelete }: EmailDetailProps) {
+export function EmailDetail({
+  email,
+  onArchive,
+  onDelete,
+  onToggleRead,
+}: EmailDetailProps) {
   return (
     <div className="space-y-4 h-full">
       <div className="flex justify-between items-start">
         <h3 className="text-xl font-bold">{email.subject}</h3>
         <div className="flex gap-1">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={onToggleRead}
+            title={email.read ? "Mark as unread" : "Mark as read"}
+          >
+            {email.read ? (
+              <MailX className="h-4 w-4" />
+            ) : (
+              <MailOpen className="h-4 w-4" />
+            )}
+            <span className="sr-only">
+              {email.read ? "Mark as unread" : "Mark as read"}
+            </span>
+          </Button>
           <Button variant="outline" size="icon" onClick={onArchive}>
             <Archive className="h-4 w-4" />
             <span className="sr-only">Archive</span>
