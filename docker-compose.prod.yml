@@ -1,0 +1,44 @@
+services:
+  db:
+    image: postgres:15
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  mailserver:
+    build:
+      context: .
+      dockerfile: Dockerfile.mail
+    ports:
+      - 25:25
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: ${DB_URL}
+      TEMPMAIL_DOMAINS: ${TEMPMAIL_DOMAINS}
+      EXPIRATION_ENABLED: ${EXPIRATION_ENABLED}
+      EXPIRE_AFTER: ${EXPIRE_AFTER}
+    restart: always
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    ports:
+      - 8080:8080
+    depends_on:
+      - db
+      - mailserver
+    environment:
+      DATABASE_URL: ${DB_URL}
+      TEMPMAIL_DOMAINS: ${TEMPMAIL_DOMAINS}
+      EXPIRATION_ENABLED: ${EXPIRATION_ENABLED}
+      EXPIRE_AFTER: ${EXPIRE_AFTER}
+    restart: always
+
+volumes:
+  postgres_data:

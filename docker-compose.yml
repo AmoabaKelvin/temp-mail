@@ -1,0 +1,32 @@
+services:
+  db:
+    image: postgres:15
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  mailserver:
+    build:
+      context: .
+      dockerfile: Dockerfile.mail
+    ports:
+      - 25:25
+    depends_on:
+      - db
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    ports:
+      - 8080:8080
+    depends_on:
+      - db
+      - mailserver
+
+volumes:
+  postgres_data:
