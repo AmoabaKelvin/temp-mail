@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"log"
 	"os"
 	"strings"
 	"time"
@@ -18,8 +19,10 @@ type Config struct {
 
 func Load() (*Config, error) {
 	err := godotenv.Load()
-	if err != nil {
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, err
+	} else if err != nil {
+		log.Println("No .env file found")
 	}
 
 	databaseURL := os.Getenv("DATABASE_URL")
