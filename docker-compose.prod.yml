@@ -34,7 +34,7 @@ services:
       - db
       - mailserver
     environment:
-      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?sslmode=disable
       TEMPMAIL_DOMAINS: ${TEMPMAIL_DOMAINS}
       EXPIRATION_ENABLED: ${EXPIRATION_ENABLED}
       EXPIRE_AFTER: ${EXPIRE_AFTER}
