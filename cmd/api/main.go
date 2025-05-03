@@ -32,7 +32,7 @@ func main() {
 
 	r.Use(cors.Handler(cors.Options{
 		// AllowedOrigins:   []string{"https://*", "http://*"},
-		AllowedOrigins:   []string{"http://localhost:3000", "https://is-temp.com"}, // Adjust to your frontend URL
+		AllowedOrigins:   []string{"http://localhost:3000", "https://www.is-temp.com", "https://is-temp.com"}, // Adjust to your frontend URL
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		ExposedHeaders:   []string{"Link"},
