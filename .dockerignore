@@ -1,0 +1,66 @@
+# Git files
+.git/
+.gitignore
+.gitattributes
+
+# Docker related files (processed by the client, not needed in context)
+Dockerfile
+Dockerfile.*
+docker-compose.yml
+docker-compose.*.yml
+.dockerignore
+
+# Go build artifacts (if built locally)
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+# Add your local binary name if it exists, e.g., 'api' if built locally
+# api
+
+# Dependencies (if vendored - though go mod download is used in Dockerfile)
+vendor/
+
+# Environment configuration files (sensitive or environment-specific)
+.env
+*.env
+
+# IDE/Editor configuration folders
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS generated files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Log files
+*.log
+*.log.*
+
+# Temporary files/directories
+tmp/
+temp/
+
+# Test coverage files
+coverage.*
+*.cover
+
+# Documentation (usually not needed in the final image)
+README.md
+LICENSE
+CONTRIBUTING.md
+docs/
+
+# User requested directory
+ui/
+
+# Other common ignores (e.g., if Node.js tools are used locally)
+# node_modules/
+# npm-debug.log*
+# yarn-debug.log*
+# yarn-error.log*
