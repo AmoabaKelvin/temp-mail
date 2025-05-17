@@ -1,8 +1,8 @@
 "use client";
 
-import { Archive, Calendar, MailOpen, MailX, Trash2, User } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
+import DOMPurify from "dompurify";
+import { Archive, Calendar, MailOpen, MailX, Trash2, User } from "lucide-react";
 
 import { formatDateTime } from "../lib/date-utils";
 
@@ -65,12 +65,12 @@ export function EmailDetail({
       </div>
 
       <div className="border-t pt-4 flex-1 min-h-[300px]">
-        <div className="prose prose-sm max-w-none">
-          {email.content.split("\n").map((paragraph, index) => (
-            <p key={index}>{paragraph}</p>
-          ))}
-        </div>
-
+        <div
+          className="prose prose-sm max-w-none"
+          dangerouslySetInnerHTML={{
+            __html: DOMPurify.sanitize(email.content),
+          }}
+        />
         {email.attachments && email.attachments.length > 0 && (
           <div className="mt-6 bg-muted/30 p-4 rounded-md">
             <h4 className="text-sm font-medium mb-2">Attachments</h4>

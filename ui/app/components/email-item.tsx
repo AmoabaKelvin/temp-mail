@@ -1,5 +1,6 @@
 "use client";
 
+import DOMPurify from "dompurify";
 import { Archive, Circle, MailOpen, MailX, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -31,7 +32,7 @@ export function EmailItem({
       className={cn(
         "flex flex-col rounded-lg border p-3 transition-colors hover:bg-accent cursor-pointer",
         isSelected && "bg-accent",
-        !email.read && "border-l-4 border-l-primary"
+        !email.read && "border-l-4 border-l-primary",
       )}
       onClick={onSelect}
     >
@@ -52,9 +53,12 @@ export function EmailItem({
         >
           {email.subject}
         </div>
-        <div className="mt-1 text-xs text-muted-foreground line-clamp-1">
-          {email.content}
-        </div>
+        <div
+          className="mt-1 text-xs text-muted-foreground line-clamp-1"
+          dangerouslySetInnerHTML={{
+            __html: DOMPurify.sanitize(email.content),
+          }}
+        />
       </div>
       <div className="mt-2 flex justify-end gap-1">
         <Button
