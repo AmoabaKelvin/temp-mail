@@ -45,9 +45,9 @@ func (app *application) mount() http.Handler {
 
 	r.Route("/v1", func(r chi.Router) {
 		r.Post("/addresses", app.GenerateAddress)
-		r.Get("/messages", app.GenerateAddress)
-		r.Get("/messages/{id}", app.GenerateAddress)
-		r.Get("/messages/{id}/read", app.GenerateAddress)
+		r.Get("/messages", app.GetMessages)
+		r.Delete("/messages/{id}", app.DeleteMessage)
+		r.Put("/messages/{id}/read", app.UpdateMessageReadAt)
 	})
 
 	return r
