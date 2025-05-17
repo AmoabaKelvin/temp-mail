@@ -1,4 +1,4 @@
-package handlers
+package main
 
 import (
 	"encoding/json"
@@ -10,38 +10,33 @@ import (
 	"time"
 
 	"github.com/AmoabaKelvin/temp-mail/internal/repository"
-	"github.com/AmoabaKelvin/temp-mail/pkg/config"
 	models "github.com/AmoabaKelvin/temp-mail/pkg/dto"
 	"github.com/go-chi/chi/v5"
 	gonanoid "github.com/matoous/go-nanoid/v2"
 )
 
-type Handler struct {
-	repo   *repository.Repository
-	config *config.Config
-}
-
-func New(repo *repository.Repository, config *config.Config) *Handler {
-	return &Handler{repo: repo, config: config}
-}
-
-func (h *Handler) generateAddress() models.Address {
+func (app *application) generateAddress() models.Address {
 	id, err := gonanoid.New()
 	if err != nil {
 		panic(err)
 	}
 
-	domain := h.config.TempmailDomains[rand.Intn(len(h.config.TempmailDomains))]
+	domain := app.config.tempMail.domains[rand.Intn(len(app.config.tempMail.domains))]
+	duration, err := time.ParseDuration(app.config.tempMail.expireAfter)
+	if err != nil {
+		panic(err)
+	}
+
 	return models.Address{
 		Email:     fmt.Sprintf("%s@%s", id, domain),
-		ExpiresAt: time.Now().Add(h.config.ExpireAfter),
+		ExpiresAt: time.Now().Add(duration),
 	}
 }
 
-func (h *Handler) GenerateAddress(w http.ResponseWriter, r *http.Request) {
-	address := h.generateAddress()
+func (app *application) GenerateAddress(w http.ResponseWriter, r *http.Request) {
+	address := app.generateAddress()
 
-	if err := h.repo.InsertAddress(&address); err != nil {
+	if err := app.store.InsertAddress(&address); err != nil {
 		http.Error(w, "Failed to insert address", http.StatusInternalServerError)
 		return
 	}
@@ -50,7 +45,7 @@ func (h *Handler) GenerateAddress(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(address)
 }
 
-func (h *Handler) GetMessages(w http.ResponseWriter, r *http.Request) {
+func (app *application) GetMessages(w http.ResponseWriter, r *http.Request) {
 	email := r.URL.Query().Get("email")
 
 	if email == "" {
@@ -58,7 +53,7 @@ func (h *Handler) GetMessages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	address, err := h.repo.GetAddressByEmail(email)
+	address, err := app.store.GetAddressByEmail(email)
 	if errors.Is(err, repository.ErrRecordNotFound) {
 		http.Error(w, "Recipient not found", http.StatusNotFound)
 		return
@@ -67,7 +62,7 @@ func (h *Handler) GetMessages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	messages, err := h.repo.GetMessagesByRecipient(address.ID)
+	messages, err := app.store.GetMessagesByRecipient(address.ID)
 	if err != nil {
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
@@ -76,7 +71,7 @@ func (h *Handler) GetMessages(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(messages)
 }
 
-func (h *Handler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
+func (app *application) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 
 	if idStr == "" {
@@ -90,7 +85,7 @@ func (h *Handler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.repo.DeleteMessage(uint(id))
+	err = app.store.DeleteMessage(uint(id))
 	if errors.Is(err, repository.ErrRecordNotFound) {
 		http.Error(w, "Message not found", http.StatusNotFound)
 		return
@@ -104,7 +99,7 @@ func (h *Handler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-func (h *Handler) UpdateMessageReadAt(w http.ResponseWriter, r *http.Request) {
+func (app *application) UpdateMessageReadAt(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 
 	if idStr == "" {
@@ -118,7 +113,7 @@ func (h *Handler) UpdateMessageReadAt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.repo.UpdateMessageReadAt(uint(id), time.Now())
+	err = app.store.UpdateMessageReadAt(uint(id), time.Now())
 	if err != nil {
 		http.Error(w, "Failed to update message read status", http.StatusInternalServerError)
 		return
