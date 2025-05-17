@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/AmoabaKelvin/temp-mail/pkg/config"
+	// "github.com/AmoabaKelvin/temp-mail/pkg/config"
 	"gorm.io/datatypes"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -42,8 +42,8 @@ type Message struct {
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
-func SetupDatabase(config *config.Config) *gorm.DB {
-	db, err := gorm.Open(postgres.Open(config.DatabaseURL), &gorm.Config{})
+func SetupDatabase(addr string) *gorm.DB {
+	db, err := gorm.Open(postgres.Open(addr), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
