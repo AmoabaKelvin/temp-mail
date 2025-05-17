@@ -7,12 +7,13 @@ import (
 	"io"
 	"log"
 	"net/mail"
+	"os"
 	"time"
 
 	"github.com/emersion/go-smtp"
 	"gorm.io/gorm"
 
-	"github.com/AmoabaKelvin/temp-mail/pkg/config"
+	// "github.com/AmoabaKelvin/temp-mail/pkg/config"
 	models "github.com/AmoabaKelvin/temp-mail/pkg/dto"
 )
 
@@ -145,19 +146,14 @@ func (s *Session) Quit() error {
 
 func startMailServer() {
 	// Create a new backend
-	config, err := config.Load()
-	if err != nil {
-		log.Fatal("Error loading config")
-	}
-
-	db := models.SetupDatabase(config)
+	db := models.SetupDatabase(os.Getenv("DATABASE_URL"))
 	backend := &Backend{db: db}
 
 	// Create a new SMTP server
 	server := smtp.NewServer(backend)
 
 	// Set the server's address
-	server.Addr = ":2525"
+	server.Addr = ":587"
 
 	// Start the server
 	if err := server.ListenAndServe(); err != nil {
