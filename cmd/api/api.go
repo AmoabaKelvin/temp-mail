@@ -35,7 +35,7 @@ func (app *application) mount() http.Handler {
 	r.Use(middleware.Logger)
 
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:3000"},
+		AllowedOrigins:   []string{"http://localhost:3000", "http://localhost:3000/*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		ExposedHeaders:   []string{"Link"},
@@ -43,8 +43,8 @@ func (app *application) mount() http.Handler {
 		MaxAge:           300,
 	}))
 
-	r.Route("/v1/", func(r chi.Router) {
-		r.Get("/addresses", app.GenerateAddress)
+	r.Route("/v1", func(r chi.Router) {
+		r.Post("/addresses", app.GenerateAddress)
 		r.Get("/messages", app.GenerateAddress)
 		r.Get("/messages/{id}", app.GenerateAddress)
 		r.Get("/messages/{id}/read", app.GenerateAddress)
