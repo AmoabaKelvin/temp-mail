@@ -7,16 +7,9 @@ import (
 
 	"github.com/AmoabaKelvin/temp-mail/internal/database"
 	"github.com/AmoabaKelvin/temp-mail/internal/repository"
-
-	"github.com/joho/godotenv"
 )
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
-
 	config := &config{
 		addr: os.Getenv("ADDR"),
 		db: &dbConfig{
