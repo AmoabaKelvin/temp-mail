@@ -18,7 +18,7 @@ import { toast } from "@/components/ui/use-toast";
 
 import {
   deleteMessage,
-  EmailMessage,
+  type EmailMessage,
   getMessages,
   updateMessageReadStatus,
 } from "../lib/api-client";
@@ -50,7 +50,7 @@ export function Inbox() {
   const [refreshing, setRefreshing] = useState(false);
   const [currentEmail, setCurrentEmail] = useState<string | null>(null);
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(
-    null
+    null,
   );
 
   const unreadCount = emails.filter((email) => !email.read).length;
@@ -60,7 +60,7 @@ export function Inbox() {
       (email) =>
         email.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
         email.from.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        email.content.toLowerCase().includes(searchQuery.toLowerCase())
+        email.content.toLowerCase().includes(searchQuery.toLowerCase()),
     );
   }, [emails, searchQuery]);
 
@@ -139,16 +139,16 @@ export function Inbox() {
     if (!email.read) {
       // Update UI optimistically
       const updatedEmails = emails.map((e) =>
-        e.id === email.id ? { ...e, read: true } : e
+        e.id === email.id ? { ...e, read: true } : e,
       );
       setEmails(updatedEmails);
 
       // Call API to update read status
-      const response = await updateMessageReadStatus(parseInt(email.id));
+      const response = await updateMessageReadStatus(Number.parseInt(email.id));
       if (response.error) {
         // Revert UI change if API call fails
         const revertedEmails = emails.map((e) =>
-          e.id === email.id ? { ...e, read: false } : e
+          e.id === email.id ? { ...e, read: false } : e,
         );
         setEmails(revertedEmails);
 
@@ -179,7 +179,7 @@ export function Inbox() {
       setSelectedEmail(null); // Clear selection if deleted email was selected
     }
 
-    const response = await deleteMessage(parseInt(emailId));
+    const response = await deleteMessage(Number.parseInt(emailId));
 
     if (response.error) {
       // Revert UI change if API call fails
@@ -206,7 +206,7 @@ export function Inbox() {
 
   const handleToggleRead = async (emailId: string) => {
     try {
-      const response = await updateMessageReadStatus(parseInt(emailId));
+      const response = await updateMessageReadStatus(Number.parseInt(emailId));
 
       if (response.error) {
         toast({
@@ -219,7 +219,7 @@ export function Inbox() {
 
       // Toggle the read status in the UI
       const updatedEmails = emails.map((email) =>
-        email.id === emailId ? { ...email, read: !email.read } : email
+        email.id === emailId ? { ...email, read: !email.read } : email,
       );
       setEmails(updatedEmails);
 
@@ -345,8 +345,8 @@ export function Inbox() {
                       {searchQuery
                         ? "Try a different search term"
                         : currentEmail
-                        ? "Your inbox is empty"
-                        : "Generate an email address first"}
+                          ? "Your inbox is empty"
+                          : "Generate an email address first"}
                     </p>
                   </div>
                 )}
@@ -374,8 +374,8 @@ export function Inbox() {
                       {searchQuery
                         ? "Try a different search term"
                         : currentEmail
-                        ? "You're all caught up!"
-                        : "Generate an email address first"}
+                          ? "You're all caught up!"
+                          : "Generate an email address first"}
                     </p>
                   </div>
                 )}
