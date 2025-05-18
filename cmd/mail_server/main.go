@@ -153,7 +153,7 @@ func startMailServer() {
 	server := smtp.NewServer(backend)
 
 	// Set the server's address
-	server.Addr = ":587"
+	server.Addr = "0.0.0.0:25"
 
 	// Start the server
 	if err := server.ListenAndServe(); err != nil {
