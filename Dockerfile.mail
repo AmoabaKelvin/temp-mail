@@ -1,0 +1,16 @@
+FROM golang:1.24 AS builder
+WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+ENV CGO_ENABLED=0 GOOS=linux
+RUN go build -ldflags="-w -s" -o ./mail_server ./cmd/mail_server
+
+FROM alpine:latest
+WORKDIR /app
+COPY --from=builder /app/mail_server /app/mail_server
+RUN chmod +x /app/mail_server 
+EXPOSE 25
+CMD ["./mail_server"] 
