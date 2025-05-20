@@ -80,12 +80,12 @@ func (s *Session) Logout() error {
 // parseMessageBody tries to extract a preferred textual body part (HTML then plain text)
 // from the email body. If parsing fails or no suitable part is found,
 // it returns the original raw body bytes as a string and its original content type.
-func parseMessageBody(originalBodyBytes []byte, header mail.Header) (bodyOutput string, finalContentType string) {
+func parseMessageBody(originalBodyBytes []byte, header mail.Header) (bodyOutput string, finalContentType string, attachments []models.Attachment) {
 	contentType := header.Get("Content-Type")
 	mediaType, params, err := mime.ParseMediaType(contentType)
 	if err != nil {
 		log.Printf("Malformed Content-Type ('%s'): %v. Returning raw body.", contentType, err)
-		return string(originalBodyBytes), contentType // Return original content type, even if malformed
+		return string(originalBodyBytes), contentType, nil // Return original content type, even if malformed
 	}
 
 	var plainTextBody string
@@ -95,7 +95,7 @@ func parseMessageBody(originalBodyBytes []byte, header mail.Header) (bodyOutput 
 		boundary := params["boundary"]
 		if boundary == "" {
 			log.Println("Multipart message lacks boundary. Returning raw body.")
-			return string(originalBodyBytes), mediaType
+			return string(originalBodyBytes), mediaType, nil
 		}
 
 		mr := multipart.NewReader(bytes.NewReader(originalBodyBytes), boundary)
@@ -106,7 +106,7 @@ func parseMessageBody(originalBodyBytes []byte, header mail.Header) (bodyOutput 
 			}
 			if partErr != nil {
 				log.Printf("Error reading multipart part: %v. Returning raw body.", partErr)
-				return string(originalBodyBytes), mediaType
+				return string(originalBodyBytes), mediaType, nil
 			}
 			defer p.Close()
 
@@ -123,6 +123,19 @@ func parseMessageBody(originalBodyBytes []byte, header mail.Header) (bodyOutput 
 				continue
 			}
 
+			// parse attachments
+			contentDisp := p.Header.Get("Content-Disposition")
+			if dispType, dispParams, err := mime.ParseMediaType(contentDisp); err == nil {
+				if dispType == "attachment" || dispType == "inline" {
+					filename := dispParams["filename"]
+					attachments = append(attachments, models.Attachment{
+						Filename: filename,
+						MimeType: partMediaType,
+						Data:     partBodyBytes,
+					})
+					continue
+				}
+			}
 			// A more robust solution would handle charset conversion here
 			// e.g., using golang.org/x/net/html/charset based on partParams["charset"]
 
@@ -134,25 +147,27 @@ func parseMessageBody(originalBodyBytes []byte, header mail.Header) (bodyOutput 
 		}
 
 		if htmlBody != "" {
-			return htmlBody, "text/html"
+			return htmlBody, "text/html", attachments
 		}
 		if plainTextBody != "" {
-			return plainTextBody, "text/plain"
+			return plainTextBody, "text/plain", attachments
 		}
 
 		log.Println("No text/html or text/plain part found in multipart message. Storing raw body.")
-		return string(originalBodyBytes), mediaType
+		return string(originalBodyBytes), mediaType, attachments
 
 	} else if mediaType == "text/plain" || mediaType == "text/html" {
-		return string(originalBodyBytes), mediaType
+		return string(originalBodyBytes), mediaType, attachments
 	}
 
 	log.Printf("Content-Type '%s' is not multipart or simple text. Storing raw body.", mediaType)
-	return string(originalBodyBytes), mediaType
+	return string(originalBodyBytes), mediaType, attachments
 }
 
 func (s *Session) Data(r io.Reader) error {
 	b, err := io.ReadAll(r)
+	var attachments []models.Attachment
+
 	if err != nil {
 		return fmt.Errorf("failed to read incoming data: %w", err)
 	}
@@ -183,7 +198,7 @@ func (s *Session) Data(r io.Reader) error {
 		return fmt.Errorf("failed to read raw message body: %w", err)
 	}
 
-	finalBodyString, _ := parseMessageBody(rawMessageBodyBytes, msg.Header)
+	finalBodyString, _, attachments := parseMessageBody(rawMessageBodyBytes, msg.Header)
 
 	log.Printf("Storing message for %s, Subject: %s, Body length: %d",
 		s.To[0], msg.Header.Get("Subject"), len(finalBodyString))
@@ -200,6 +215,8 @@ func (s *Session) Data(r io.Reader) error {
 	if err := s.db.Create(&message).Error; err != nil {
 		return fmt.Errorf("failed to store message: %w", err)
 	}
+
+	fmt.Println(attachments)
 
 	log.Printf("Successfully stored message ID %d for %s", message.ID, s.To[0])
 	return nil
