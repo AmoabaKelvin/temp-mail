@@ -42,6 +42,14 @@ type Message struct {
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
+type Attachment struct {
+	ID        uint   `gorm:"primaryKey" json:"id"`
+	MessageID uint   `gorm:"foreinKey:Message" json:"-"`
+	Filename  string `gorm:"type:varchar" json:"filename"`
+	MimeType  string `gorm:"type:varchar" json:"mimetype"`
+	Data      []byte `gorm:"type:bytea"`
+}
+
 func SetupDatabase(addr string) *gorm.DB {
 	db, err := gorm.Open(postgres.Open(addr), &gorm.Config{})
 	if err != nil {
