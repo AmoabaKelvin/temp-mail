@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/AmoabaKelvin/temp-mail/internal/database"
+	"github.com/AmoabaKelvin/temp-mail/internal/db"
 	"github.com/AmoabaKelvin/temp-mail/internal/repository"
 )
 
@@ -22,7 +22,7 @@ func main() {
 		},
 	}
 
-	db, err := database.New(config.db.addr)
+	db, err := db.New(config.db.addr)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}

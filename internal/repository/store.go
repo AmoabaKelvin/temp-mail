@@ -5,17 +5,17 @@ import (
 	"errors"
 	"time"
 
-	"github.com/AmoabaKelvin/temp-mail/internal/database"
+	"github.com/AmoabaKelvin/temp-mail/internal/db"
 	models "github.com/AmoabaKelvin/temp-mail/pkg/dto"
 )
 
 var ErrRecordNotFound = errors.New("record not found")
 
 type Repository struct {
-	db *database.DB
+	db *db.DB
 }
 
-func New(db *database.DB) *Repository {
+func New(db *db.DB) *Repository {
 	return &Repository{db: db}
 }
 

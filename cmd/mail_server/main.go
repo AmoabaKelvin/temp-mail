@@ -14,9 +14,8 @@ import (
 	"time"
 
 	"github.com/emersion/go-smtp"
-	"gorm.io/gorm"
 
-	// "github.com/AmoabaKelvin/temp-mail/pkg/config"
+	"github.com/AmoabaKelvin/temp-mail/internal/db"
 	models "github.com/AmoabaKelvin/temp-mail/pkg/dto"
 )
 
@@ -40,7 +39,7 @@ import (
 // Backend implements SMTP server methods.
 
 type Backend struct {
-	db *gorm.DB
+	db *db.DB
 }
 
 func (bkd *Backend) NewSession(_ *smtp.Conn) (smtp.Session, error) {
@@ -51,7 +50,7 @@ func (bkd *Backend) NewSession(_ *smtp.Conn) (smtp.Session, error) {
 type Session struct {
 	From string
 	To   []string
-	db   *gorm.DB
+	db   *db.DB
 }
 
 func (s *Session) Session() {
@@ -169,7 +168,7 @@ func (s *Session) Data(r io.Reader) error {
 	}
 
 	var address models.Address
-	if err := s.db.Where("email = ?", s.To[0]).First(&address).Error; err != nil {
+	if err := s.db.QueryRow("SELECT id, email, expires_at FROM addresses WHERE email = $1", s.To[0]).Scan(&address.ID, &address.Email, &address.ExpiresAt); err != nil {
 		return fmt.Errorf("receiver address '%s' not found: %w", s.To[0], err)
 	}
 
@@ -197,7 +196,7 @@ func (s *Session) Data(r io.Reader) error {
 		Headers:     headersJSON,
 	}
 
-	if err := s.db.Create(&message).Error; err != nil {
+	if _, err := s.db.Exec("INSERT INTO messages (from_address, to_address_id, subject, body, received_at) VALUES ($1, $2, $3, $4, $5)", message.FromAddress, message.ToAddressID, message.Subject, message.Body, message.ReceivedAt); err != nil {
 		return fmt.Errorf("failed to store message: %w", err)
 	}
 
@@ -224,7 +223,11 @@ func (s *Session) Quit() error {
 }
 
 func startMailServer() {
-	db := models.SetupDatabase(os.Getenv("DATABASE_URL"))
+	db, err := db.New(os.Getenv("DATABASE_URL"))
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+
 	backend := &Backend{db: db}
 
 	server := smtp.NewServer(backend)
