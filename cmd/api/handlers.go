@@ -9,13 +9,12 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/AmoabaKelvin/temp-mail/internal/repository"
-	models "github.com/AmoabaKelvin/temp-mail/pkg/dto"
+	"github.com/AmoabaKelvin/temp-mail/internal/store"
 	"github.com/go-chi/chi/v5"
 	gonanoid "github.com/matoous/go-nanoid/v2"
 )
 
-func (app *application) generateAddress() models.Address {
+func (app *application) generateAddress() store.Address {
 	id, err := gonanoid.New()
 	if err != nil {
 		panic(err)
@@ -27,7 +26,7 @@ func (app *application) generateAddress() models.Address {
 		panic(err)
 	}
 
-	return models.Address{
+	return store.Address{
 		Email:     fmt.Sprintf("%s@%s", id, domain),
 		ExpiresAt: time.Now().Add(duration),
 	}
@@ -36,7 +35,7 @@ func (app *application) generateAddress() models.Address {
 func (app *application) GenerateAddress(w http.ResponseWriter, r *http.Request) {
 	address := app.generateAddress()
 
-	if err := app.store.InsertAddress(&address); err != nil {
+	if err := app.store.Addresses.Create(r.Context(), &address); err != nil {
 		http.Error(w, "Failed to insert address", http.StatusInternalServerError)
 		return
 	}
@@ -53,8 +52,8 @@ func (app *application) GetMessages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	address, err := app.store.GetAddressByEmail(email)
-	if errors.Is(err, repository.ErrRecordNotFound) {
+	address, err := app.store.Addresses.Get(r.Context(), email)
+	if errors.Is(err, store.ErrNotFound) {
 		http.Error(w, "Recipient not found", http.StatusNotFound)
 		return
 	} else if err != nil {
@@ -62,7 +61,7 @@ func (app *application) GetMessages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	messages, err := app.store.GetMessagesByRecipient(address.ID)
+	messages, err := app.store.Messages.Get(r.Context(), address.ID)
 	if err != nil {
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
@@ -73,24 +72,19 @@ func (app *application) GetMessages(w http.ResponseWriter, r *http.Request) {
 
 func (app *application) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
-
-	if idStr == "" {
-		http.Error(w, "Message ID is required", http.StatusBadRequest)
-		return
-	}
-
-	id, err := strconv.ParseUint(idStr, 10, 64)
+	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		http.Error(w, "Invalid message ID", http.StatusBadRequest)
 		return
 	}
 
-	err = app.store.DeleteMessage(uint(id))
-	if errors.Is(err, repository.ErrRecordNotFound) {
-		http.Error(w, "Message not found", http.StatusNotFound)
-		return
-	} else if err != nil {
-		http.Error(w, "Failed to delete message", http.StatusInternalServerError)
+	if err := app.store.Messages.Delete(r.Context(), id); err != nil {
+		switch err {
+		case store.ErrNotFound:
+			http.Error(w, "Message not found", http.StatusNotFound)
+		default:
+			http.Error(w, "Failed to delete message", http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -100,20 +94,16 @@ func (app *application) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) UpdateMessageReadAt(w http.ResponseWriter, r *http.Request) {
+	readAt := time.Now()
+
 	idStr := chi.URLParam(r, "id")
-
-	if idStr == "" {
-		http.Error(w, "Message ID is required", http.StatusBadRequest)
-		return
-	}
-
-	id, err := strconv.ParseUint(idStr, 10, 64)
+	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		http.Error(w, "Invalid message ID", http.StatusBadRequest)
 		return
 	}
 
-	err = app.store.UpdateMessageReadAt(uint(id), time.Now())
+	err = app.store.Messages.SetReadAt(r.Context(), id, &readAt)
 	if err != nil {
 		http.Error(w, "Failed to update message read status", http.StatusInternalServerError)
 		return

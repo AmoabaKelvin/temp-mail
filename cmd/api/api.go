@@ -3,7 +3,7 @@ package main
 import (
 	"net/http"
 
-	"github.com/AmoabaKelvin/temp-mail/internal/repository"
+	"github.com/AmoabaKelvin/temp-mail/internal/store"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -11,7 +11,7 @@ import (
 
 type application struct {
 	config *config
-	store  *repository.Repository
+	store  *store.Storage
 }
 
 type config struct {
