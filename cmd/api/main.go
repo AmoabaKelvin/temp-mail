@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/AmoabaKelvin/temp-mail/internal/db"
-	"github.com/AmoabaKelvin/temp-mail/internal/repository"
+	"github.com/AmoabaKelvin/temp-mail/internal/store"
 )
 
 func main() {
@@ -27,10 +27,10 @@ func main() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	repository := repository.New(db)
+	store := store.NewStorage(db)
 	app := &application{
 		config: config,
-		store:  repository,
+		store:  store,
 	}
 
 	routes := app.mount()
