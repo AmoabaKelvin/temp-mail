@@ -44,10 +44,10 @@ func (app *application) mount() http.Handler {
 	}))
 
 	r.Route("/v1", func(r chi.Router) {
-		r.Post("/addresses", app.GenerateAddress)
-		r.Get("/messages", app.GetMessages)
-		r.Delete("/messages/{id}", app.DeleteMessage)
-		r.Put("/messages/{id}/read", app.UpdateMessageReadAt)
+		r.Post("/addresses", app.generateAddress)
+		r.Get("/messages", app.getMessages)
+		r.Delete("/messages/{id}", app.deleteMessage)
+		r.Put("/messages/{id}/read", app.updateMessageReadAt)
 	})
 
 	return r

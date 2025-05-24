@@ -3,48 +3,15 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
-	"math/rand"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/AmoabaKelvin/temp-mail/internal/store"
 	"github.com/go-chi/chi/v5"
-	gonanoid "github.com/matoous/go-nanoid/v2"
 )
 
-func (app *application) generateAddress() store.Address {
-	id, err := gonanoid.New()
-	if err != nil {
-		panic(err)
-	}
-
-	domain := app.config.tempMail.domains[rand.Intn(len(app.config.tempMail.domains))]
-	duration, err := time.ParseDuration(app.config.tempMail.expireAfter)
-	if err != nil {
-		panic(err)
-	}
-
-	return store.Address{
-		Email:     fmt.Sprintf("%s@%s", id, domain),
-		ExpiresAt: time.Now().Add(duration),
-	}
-}
-
-func (app *application) GenerateAddress(w http.ResponseWriter, r *http.Request) {
-	address := app.generateAddress()
-
-	if err := app.store.Addresses.Create(r.Context(), &address); err != nil {
-		http.Error(w, "Failed to insert address", http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(address)
-}
-
-func (app *application) GetMessages(w http.ResponseWriter, r *http.Request) {
+func (app *application) getMessages(w http.ResponseWriter, r *http.Request) {
 	email := r.URL.Query().Get("email")
 
 	if email == "" {
@@ -70,7 +37,7 @@ func (app *application) GetMessages(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(messages)
 }
 
-func (app *application) DeleteMessage(w http.ResponseWriter, r *http.Request) {
+func (app *application) deleteMessage(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -93,7 +60,7 @@ func (app *application) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-func (app *application) UpdateMessageReadAt(w http.ResponseWriter, r *http.Request) {
+func (app *application) updateMessageReadAt(w http.ResponseWriter, r *http.Request) {
 	readAt := time.Now()
 
 	idStr := chi.URLParam(r, "id")
