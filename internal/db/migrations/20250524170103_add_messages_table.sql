@@ -6,7 +6,9 @@ CREATE TABLE IF NOT EXISTS messages (
     to_address_id INT NOT NULL REFERENCES addresses(id) ON DELETE CASCADE,
     subject varchar(255),
     headers JSONB,
-    body text,
+    body_html text,
+    body_plain text,
+    content_type varchar(100),
     received_at TIMESTAMP WITH TIME ZONE NOT NULL,
     read_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -16,6 +18,7 @@ CREATE TABLE IF NOT EXISTS messages (
 CREATE INDEX IF NOT EXISTS idx_messages_to_address_id ON messages (to_address_id);
 CREATE INDEX IF NOT EXISTS idx_messages_received_at ON messages (received_at);
 CREATE INDEX IF NOT EXISTS idx_messages_read_at ON messages (read_at);
+CREATE INDEX IF NOT EXISTS idx_messages_content_type ON messages (content_type);
 -- +goose StatementEnd
 
 -- +goose Down
@@ -24,4 +27,5 @@ DROP TABLE IF EXISTS messages;
 DROP INDEX IF EXISTS idx_messages_to_address_id;
 DROP INDEX IF EXISTS idx_messages_received_at;
 DROP INDEX IF EXISTS idx_messages_read_at;
+DROP INDEX IF EXISTS idx_messages_content_type;
 -- +goose StatementEnd
