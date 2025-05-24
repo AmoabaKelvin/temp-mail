@@ -88,21 +88,32 @@ func validateRecipient(store *store.Storage, address string) (*store.Address, er
 	return addr, nil
 }
 
-// extractMessageBody reads and processes the message body
-func extractMessageBody(msg *mail.Message) (string, error) {
+// extractMessageBody reads and processes the message body to extract both HTML and plain text versions
+func extractMessageBody(msg *mail.Message) (htmlBody, plainBody, contentType string, err error) {
 	rawBodyBytes, err := io.ReadAll(msg.Body)
 	if err != nil {
-		return "", fmt.Errorf("failed to read raw message body: %w", err)
+		return "", "", "", fmt.Errorf("failed to read raw message body: %w", err)
 	}
 
-	processedBody, _ := parseMessageBody(rawBodyBytes, msg.Header)
-	return processedBody, nil
+	html, plain, ctype := parseMessageBody(rawBodyBytes, msg.Header)
+	return html, plain, ctype, nil
 }
 
 // createMessage constructs a store.Message from the parsed email data
-func createMessage(from, subject, body string, headers []byte, addressID uint) store.Message {
+func createMessage(from, subject, htmlBody, plainBody, contentType string, headers []byte, addressID uint) store.Message {
+	// Convert strings to pointers for nullable fields
+	var htmlPtr, plainPtr *string
+	if htmlBody != "" {
+		htmlPtr = &htmlBody
+	}
+	if plainBody != "" {
+		plainPtr = &plainBody
+	}
+
 	return store.Message{
-		Body:        body,
+		BodyHTML:    htmlPtr,
+		BodyPlain:   plainPtr,
+		ContentType: contentType,
 		FromAddress: from,
 		ToAddressID: addressID,
 		ReceivedAt:  time.Now(),
@@ -158,54 +169,40 @@ func parseMultipartBody(bodyBytes []byte, boundary string) (htmlBody, plainBody 
 	return htmlBody, plainBody, nil
 }
 
-// selectPreferredBody chooses the best available body content (HTML preferred over plain text)
-func selectPreferredBody(htmlBody, plainBody string) (body, contentType string) {
-	if htmlBody != "" {
-		return htmlBody, "text/html"
-	}
-	if plainBody != "" {
-		return plainBody, "text/plain"
-	}
-	return "", ""
-}
-
-// parseMessageBody tries to extract a preferred textual body part (HTML then plain text)
-// from the email body. If parsing fails or no suitable part is found,
-// it returns the original raw body bytes as a string and its original content type.
-func parseMessageBody(originalBodyBytes []byte, header mail.Header) (bodyOutput string, finalContentType string) {
-	contentType := header.Get("Content-Type")
+// parseMessageBody tries to extract both HTML and plain text body parts from the email body.
+// Returns htmlBody, plainBody, and contentType. For non-multipart messages, one of the body
+// fields will be populated based on the content type, and the other will be empty.
+func parseMessageBody(originalBodyBytes []byte, header mail.Header) (htmlBody, plainBody, contentType string) {
+	contentType = header.Get("Content-Type")
 	mediaType, params, err := mime.ParseMediaType(contentType)
 	if err != nil {
-		log.Printf("Malformed Content-Type ('%s'): %v. Returning raw body.", contentType, err)
-		return string(originalBodyBytes), contentType
+		log.Printf("Malformed Content-Type ('%s'): %v. Returning raw body as plain text.", contentType, err)
+		return "", string(originalBodyBytes), "text/plain"
 	}
 
 	if strings.HasPrefix(mediaType, "multipart/") {
 		boundary := params["boundary"]
 		if boundary == "" {
-			log.Println("Multipart message lacks boundary. Returning raw body.")
-			return string(originalBodyBytes), mediaType
+			log.Println("Multipart message lacks boundary. Returning raw body as plain text.")
+			return "", string(originalBodyBytes), mediaType
 		}
 
-		htmlBody, plainBody, err := parseMultipartBody(originalBodyBytes, boundary)
+		html, plain, err := parseMultipartBody(originalBodyBytes, boundary)
 		if err != nil {
-			log.Printf("Error parsing multipart body: %v. Returning raw body.", err)
-			return string(originalBodyBytes), mediaType
+			log.Printf("Error parsing multipart body: %v. Returning raw body as plain text.", err)
+			return "", string(originalBodyBytes), mediaType
 		}
 
-		if body, ctype := selectPreferredBody(htmlBody, plainBody); body != "" {
-			return body, ctype
-		}
+		return html, plain, mediaType
 
-		log.Println("No text/html or text/plain part found in multipart message. Storing raw body.")
-		return string(originalBodyBytes), mediaType
-
-	} else if mediaType == "text/plain" || mediaType == "text/html" {
-		return string(originalBodyBytes), mediaType
+	} else if mediaType == "text/html" {
+		return string(originalBodyBytes), "", mediaType
+	} else if mediaType == "text/plain" {
+		return "", string(originalBodyBytes), mediaType
 	}
 
-	log.Printf("Content-Type '%s' is not multipart or simple text. Storing raw body.", mediaType)
-	return string(originalBodyBytes), mediaType
+	log.Printf("Content-Type '%s' is not multipart or simple text. Storing raw body as plain text.", mediaType)
+	return "", string(originalBodyBytes), "text/plain"
 }
 
 func (s *Session) Data(r io.Reader) error {
@@ -228,18 +225,18 @@ func (s *Session) Data(r io.Reader) error {
 	}
 
 	// Extract and process message body
-	body, err := extractMessageBody(msg)
+	htmlBody, plainBody, contentType, err := extractMessageBody(msg)
 	if err != nil {
 		return err
 	}
 
 	// Create message object
 	subject := msg.Header.Get("Subject")
-	message := createMessage(s.From, subject, body, headersJSON, uint(address.ID))
+	message := createMessage(s.From, subject, htmlBody, plainBody, contentType, headersJSON, uint(address.ID))
 
 	// Log the operation
-	log.Printf("Storing message for %s, Subject: %s, Body length: %d",
-		s.To[0], subject, len(body))
+	log.Printf("Storing message for %s, Subject: %s, HTML length: %d, Plain length: %d, Content-Type: %s",
+		s.To[0], subject, len(htmlBody), len(plainBody), contentType)
 
 	// Store the message
 	if err := storeMessage(s.store, &message); err != nil {
