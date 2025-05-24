@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -33,10 +32,9 @@ func (app *application) generateAddress(w http.ResponseWriter, r *http.Request) 
 	address := app.newRandomAddress()
 
 	if err := app.store.Addresses.Create(r.Context(), &address); err != nil {
-		http.Error(w, "Failed to insert address", http.StatusInternalServerError)
+		app.serverError(w)
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(address)
+	app.writeJSON(w, http.StatusCreated, address, nil)
 }
