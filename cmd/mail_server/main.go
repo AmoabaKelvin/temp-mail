@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,7 +17,7 @@ import (
 	"github.com/emersion/go-smtp"
 
 	"github.com/AmoabaKelvin/temp-mail/internal/db"
-	models "github.com/AmoabaKelvin/temp-mail/pkg/dto"
+	"github.com/AmoabaKelvin/temp-mail/internal/store"
 )
 
 // todo
@@ -39,18 +40,18 @@ import (
 // Backend implements SMTP server methods.
 
 type Backend struct {
-	db *db.DB
+	store *store.Storage
 }
 
 func (bkd *Backend) NewSession(_ *smtp.Conn) (smtp.Session, error) {
-	return &Session{db: bkd.db}, nil
+	return &Session{store: bkd.store}, nil
 }
 
 // A Session is returned after EHLO.
 type Session struct {
-	From string
-	To   []string
-	db   *db.DB
+	From  string
+	To    []string
+	store *store.Storage
 }
 
 func (s *Session) Session() {
@@ -167,8 +168,9 @@ func (s *Session) Data(r io.Reader) error {
 		return fmt.Errorf("failed to marshal headers: %w", err)
 	}
 
-	var address models.Address
-	if err := s.db.QueryRow("SELECT id, email, expires_at FROM addresses WHERE email = $1", s.To[0]).Scan(&address.ID, &address.Email, &address.ExpiresAt); err != nil {
+	ctx := context.Background()
+	address, err := s.store.Addresses.Get(ctx, s.To[0])
+	if err != nil {
 		return fmt.Errorf("receiver address '%s' not found: %w", s.To[0], err)
 	}
 
@@ -176,7 +178,6 @@ func (s *Session) Data(r io.Reader) error {
 		return fmt.Errorf("receiver address '%s' has expired", s.To[0])
 	}
 
-	// Read the body part of the parsed email message
 	rawMessageBodyBytes, err := io.ReadAll(msg.Body)
 	if err != nil {
 		return fmt.Errorf("failed to read raw message body: %w", err)
@@ -187,16 +188,16 @@ func (s *Session) Data(r io.Reader) error {
 	log.Printf("Storing message for %s, Subject: %s, Body length: %d",
 		s.To[0], msg.Header.Get("Subject"), len(finalBodyString))
 
-	message := models.Message{
+	message := store.Message{
 		Body:        finalBodyString,
 		FromAddress: s.From,
-		ToAddressID: address.ID,
+		ToAddressID: uint(address.ID),
 		ReceivedAt:  time.Now(),
 		Subject:     msg.Header.Get("Subject"),
 		Headers:     headersJSON,
 	}
 
-	if _, err := s.db.Exec("INSERT INTO messages (from_address, to_address_id, subject, body, received_at) VALUES ($1, $2, $3, $4, $5)", message.FromAddress, message.ToAddressID, message.Subject, message.Body, message.ReceivedAt); err != nil {
+	if err := s.store.Messages.Create(ctx, &message); err != nil {
 		return fmt.Errorf("failed to store message: %w", err)
 	}
 
@@ -206,7 +207,7 @@ func (s *Session) Data(r io.Reader) error {
 
 func (s *Session) AuthPlain(username, password string) error {
 	if username != "testuser" || password != "testpass" {
-		return fmt.Errorf("Invalid username or password")
+		return fmt.Errorf("invalid username or password")
 	}
 
 	return nil
@@ -228,7 +229,9 @@ func startMailServer() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	backend := &Backend{db: db}
+	store := store.NewStorage(db)
+
+	backend := &Backend{store: store}
 
 	server := smtp.NewServer(backend)
 

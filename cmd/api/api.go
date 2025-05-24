@@ -3,7 +3,7 @@ package main
 import (
 	"net/http"
 
-	"github.com/AmoabaKelvin/temp-mail/internal/repository"
+	"github.com/AmoabaKelvin/temp-mail/internal/store"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -11,7 +11,7 @@ import (
 
 type application struct {
 	config *config
-	store  *repository.Repository
+	store  *store.Storage
 }
 
 type config struct {
@@ -44,10 +44,14 @@ func (app *application) mount() http.Handler {
 	}))
 
 	r.Route("/v1", func(r chi.Router) {
-		r.Post("/addresses", app.GenerateAddress)
-		r.Get("/messages", app.GetMessages)
-		r.Delete("/messages/{id}", app.DeleteMessage)
-		r.Put("/messages/{id}/read", app.UpdateMessageReadAt)
+		r.Post("/addresses", app.generateAddress)
+		r.Route("/messages", func(r chi.Router) {
+			r.Get("/", app.getMessages)
+			r.Route("/{id}", func(r chi.Router) {
+				r.Delete("/", app.deleteMessage)
+				r.Put("/read", app.updateMessageReadAt)
+			})
+		})
 	})
 
 	return r

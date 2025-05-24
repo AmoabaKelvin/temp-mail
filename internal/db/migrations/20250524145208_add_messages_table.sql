@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS messages (
     from_address varchar(255) NOT NULL,
     to_address_id INT NOT NULL REFERENCES addresses(id) ON DELETE CASCADE,
     subject varchar(255),
+    headers JSONB,
     body text,
     received_at TIMESTAMP WITH TIME ZONE NOT NULL,
     read_at TIMESTAMP WITH TIME ZONE,
