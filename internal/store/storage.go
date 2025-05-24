@@ -16,6 +16,7 @@ var (
 type Storage struct {
 	Messages interface {
 		Get(context.Context, int64) ([]Message, error)
+		GetByID(context.Context, int64) (*Message, error)
 		Delete(context.Context, int64) error
 		SetReadAt(context.Context, int64, *time.Time) error
 		Create(context.Context, *Message) error
