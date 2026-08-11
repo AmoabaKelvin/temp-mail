@@ -3,3 +3,8 @@ ui/.next/*
 .DS_Store
 .env
 .env.ui
+.vercel
+.env*
+ui/.open-next
+ui/.env.cf-migration
+ui/.wrangler/

@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "temp-mail",
+  "routes": [
+    { "pattern": "is-temp.com", "custom_domain": true },
+    { "pattern": "www.is-temp.com", "custom_domain": true }
+  ],
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-08-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+  "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "temp-mail" }],
+  "observability": { "enabled": true }
+}
