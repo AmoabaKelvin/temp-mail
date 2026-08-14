@@ -1,0 +1,29 @@
+name: Deploy
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - name: Deploy to Cloudflare Workers
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: e1c30154a387214494e77fad7672e39e
+          CF_BUILD_ENV: ${{ secrets.CF_BUILD_ENV }}
+        run: |
+          if [ -n "$CF_BUILD_ENV" ]; then
+            printf '%s' "$CF_BUILD_ENV" > .env.ci
+            set -a; . ./.env.ci; set +a
+          fi
+          bun run deploy
