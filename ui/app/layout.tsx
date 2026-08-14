@@ -14,7 +14,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        {children}
+        {process.env.NODE_ENV === 'production' && (
+          <script
+            defer
+            src="https://static.cloudflareinsights.com/beacon.min.js"
+            data-cf-beacon='{"token": "48d1fad733f04b8f9418856a6870d907"}'
+          />
+        )}
+      </body>
     </html>
   );
 }
